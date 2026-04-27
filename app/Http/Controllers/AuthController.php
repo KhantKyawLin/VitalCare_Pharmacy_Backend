@@ -6,19 +6,18 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use App\Models\User;
+use App\Models\PasswordResetRequest;
 use Illuminate\Support\Facades\Validator;
 
 class AuthController extends Controller
 {
-
     /**
-     * Get a JWT via given credentials.
-     *
-     * @return \Illuminate\Http\JsonResponse
+     * Login — returns JWT token.
      */
     public function login()
     {
         $credentials = request(['email', 'password']);
+        \Illuminate\Support\Facades\Log::info('Login attempt:', $credentials);
 
         if (! $token = auth('api')->attempt($credentials)) {
             return response()->json(['error' => 'Unauthorized'], 401);
@@ -29,8 +28,6 @@ class AuthController extends Controller
 
     /**
      * Register a new user.
-     *
-     * @return \Illuminate\Http\JsonResponse
      */
     public function register(Request $request)
     {
@@ -63,31 +60,38 @@ class AuthController extends Controller
     }
 
     /**
-     * Get the authenticated User.
-     *
-     * @return \Illuminate\Http\JsonResponse
+     * Get authenticated user.
      */
     public function me()
     {
-        return response()->json(auth('api')->user());
+        $user = auth('api')->user();
+        $data = $user->toArray();
+        $data['permissions'] = [];
+
+        // Include role permissions for frontend
+        if ($user->roleModel) {
+            $data['permissions'] = $user->roleModel->permissions->pluck('name');
+        }
+
+        // Admin/superadmin gets all permissions
+        if ($user->isAdmin()) {
+            $data['permissions'] = \App\Models\Permission::pluck('name');
+        }
+
+        return response()->json($data);
     }
 
     /**
-     * Log the user out (Invalidate the token).
-     *
-     * @return \Illuminate\Http\JsonResponse
+     * Logout.
      */
     public function logout()
     {
         auth('api')->logout();
-
         return response()->json(['message' => 'Successfully logged out']);
     }
 
     /**
-     * Refresh a token.
-     *
-     * @return \Illuminate\Http\JsonResponse
+     * Refresh token.
      */
     public function refresh()
     {
@@ -95,11 +99,68 @@ class AuthController extends Controller
     }
 
     /**
-     * Get the token array structure.
-     *
-     * @param  string $token
-     *
-     * @return \Illuminate\Http\JsonResponse
+     * Update own profile.
+     */
+    public function updateProfile(Request $request)
+    {
+        $user = auth('api')->user();
+
+        $validator = Validator::make($request->all(), [
+            'name' => 'sometimes|string|max:50',
+            'phone' => 'sometimes|string|max:50',
+            'address' => 'sometimes|string',
+            'gender' => 'sometimes|in:male,female,others',
+            'password' => 'sometimes|string|min:6|confirmed',
+        ]);
+        if ($validator->fails()) return response()->json($validator->errors(), 422);
+
+        $data = $request->only(['name', 'phone', 'address', 'gender']);
+
+        if ($request->has('password')) {
+            $data['password'] = Hash::make($request->password);
+        }
+
+        // Handle profile image upload
+        if ($request->hasFile('profile')) {
+            $data['profile'] = $request->file('profile')->store('profiles', 'public');
+        }
+
+        $user->update($data);
+
+        return response()->json(['message' => 'Profile updated', 'user' => $user->fresh()]);
+    }
+
+    /**
+     * Forgot password — creates a reset request for admin.
+     */
+    public function forgotPassword(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'email' => 'required|email|exists:users,email',
+        ]);
+        if ($validator->fails()) return response()->json($validator->errors(), 422);
+
+        $user = User::where('email', $request->email)->first();
+
+        // Check if there's already a pending request
+        $existing = PasswordResetRequest::where('user_id', $user->id)
+            ->where('status', 'pending')
+            ->first();
+
+        if ($existing) {
+            return response()->json(['message' => 'A password reset request is already pending.'], 409);
+        }
+
+        PasswordResetRequest::create([
+            'user_id' => $user->id,
+            'status' => 'pending',
+        ]);
+
+        return response()->json(['message' => 'Password reset request submitted. The admin will process your request and send you a new password via email.']);
+    }
+
+    /**
+     * Return token response.
      */
     protected function respondWithToken($token)
     {
