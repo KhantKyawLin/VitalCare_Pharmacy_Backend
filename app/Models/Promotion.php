@@ -9,6 +9,7 @@ class Promotion extends Model
 
     protected $fillable = [
         'title', 'type', 'description', 'discount_value',
+        'promotion_scope', 'min_qty_requirement', 'min_order_value', 'max_usage_per_bill',
         'start_date', 'end_date', 'is_active'
     ];
 

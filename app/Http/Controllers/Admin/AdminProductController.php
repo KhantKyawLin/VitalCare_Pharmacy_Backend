@@ -225,7 +225,7 @@ class AdminProductController extends Controller
      */
     public function show($id)
     {
-        $product = Product::with(['category', 'unit', 'pictures', 'movements'])->findOrFail($id);
+        $product = Product::with(['category', 'unit', 'pictures', 'movements', 'promotions'])->findOrFail($id);
         return response()->json($product);
     }
 

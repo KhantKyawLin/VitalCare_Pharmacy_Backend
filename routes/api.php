@@ -177,7 +177,9 @@ Route::group([
 
     // --- Promotions (admin + staff) ---
     Route::group(['middleware' => 'permission:promotions.crud'], function () {
+        Route::get('promotions/products', [AdminPromotionController::class, 'products']);
         Route::get('promotions', [AdminPromotionController::class, 'index']);
+        Route::get('promotions/{id}', [AdminPromotionController::class, 'show']);
         Route::post('promotions', [AdminPromotionController::class, 'store']);
         Route::put('promotions/{id}', [AdminPromotionController::class, 'update']);
         Route::delete('promotions/{id}', [AdminPromotionController::class, 'destroy']);
