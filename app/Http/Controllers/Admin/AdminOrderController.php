@@ -14,18 +14,21 @@ class AdminOrderController extends Controller
         $query = Order::with(['user', 'orderProducts.product.pictures']);
 
         if ($request->has('status')) {
-            $query->where('order_status', $request->status);
+            $query->where('status', $request->status);
         }
         if ($request->has('date')) {
-            $query->whereDate('order_date', $request->date);
+            $query->whereDate('created_at', $request->date);
+        }
+        if ($request->has('order_type')) {
+            $query->where('order_type', $request->order_type);
         }
 
-        return response()->json($query->latest('order_date')->paginate($request->get('per_page', 15)));
+        return response()->json($query->latest('created_at')->paginate($request->get('per_page', 15)));
     }
 
     public function show($id)
     {
-        $order = Order::with(['user', 'orderProducts.product.pictures'])->findOrFail($id);
+        $order = Order::with(['user', 'orderProducts.product.pictures', 'cashier'])->findOrFail($id);
         return response()->json($order);
     }
 
@@ -35,12 +38,12 @@ class AdminOrderController extends Controller
         $old = $order->toArray();
 
         $request->validate([
-            'order_status' => 'sometimes|in:pending,completed,cancelled',
+            'status' => 'sometimes|in:pending,completed,cancelled',
             'deliver_status' => 'sometimes|in:pending,shipped,delivered,returned',
             'payment_status' => 'sometimes|in:pending,paid,refunded',
         ]);
 
-        $order->update($request->only(['order_status', 'deliver_status', 'payment_status']));
+        $order->update($request->only(['status', 'deliver_status', 'payment_status']));
 
         ActivityLog::log('updated', 'Order', $id, "Order #$id status updated", $old, $order->toArray());
 

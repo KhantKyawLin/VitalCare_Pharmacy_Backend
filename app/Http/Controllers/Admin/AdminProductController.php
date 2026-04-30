@@ -41,10 +41,11 @@ class AdminProductController extends Controller
         // Compute global metrics
         $totalProducts = Product::count();
         $lowStockQuery = Product::with('movements')->get()->filter(function ($p) {
-            $totalStock = $p->movements->where('movement_type', '!=', 'sold-out')->sum('instock_quantity');
+            $totalStock = $p->movements->sum('instock_quantity');
             return $totalStock <= $p->minimum_quantity;
         })->count();
-        $expiringSoon = \App\Models\ProductMovement::where('movement_type', '!=', 'sold-out')
+        $expiringSoon = \App\Models\ProductMovement::where('instock_quantity', '>', 0)
+            ->whereIn('movement_type', ['current', 'stored'])
             ->whereBetween('expired_date', [now(), now()->addDays(30)])
             ->count();
         $activeSuppliers = \App\Models\SupplyProduct::distinct('supplier_id')->count('supplier_id');
@@ -241,7 +242,7 @@ class AdminProductController extends Controller
 
     }
     /**
-     * Search products for dropdowns (軽量).
+     * Search products for dropdowns 
      */
     public function search(Request $request)
     {

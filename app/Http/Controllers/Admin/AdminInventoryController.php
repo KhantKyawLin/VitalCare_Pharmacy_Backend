@@ -142,7 +142,9 @@ class AdminInventoryController extends Controller
 
         $alerts = $products->map(function ($product) {
             $currentStock = $product->movements->whereIn('movement_type', ['current', 'stored'])->sum('instock_quantity');
-            $latestMovement = $product->movements->first();
+            $latestMovement = $product->movements->first(function($m) {
+                return $m->purchaseProduct && $m->purchaseProduct->purchase && $m->purchaseProduct->purchase->supplier;
+            }) ?: $product->movements->first();
             
             $supplierName = '-';
             $supplierId = null;

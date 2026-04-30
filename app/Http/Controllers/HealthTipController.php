@@ -9,16 +9,28 @@ class HealthTipController extends Controller
 {
     public function index()
     {
-        $tips = HealthTip::latest()->get();
+        $tips = HealthTip::with('author')
+            ->where('is_published', true)
+            ->latest()
+            ->get();
         return response()->json($tips);
     }
 
     public function show($id)
     {
-        $tip = HealthTip::find($id);
-        if (!$tip) {
-            return response()->json(['message' => 'Health tip not found'], 404);
-        }
-        return response()->json($tip);
+        $tip = HealthTip::with('author')
+            ->where('is_published', true)
+            ->findOrFail($id);
+
+        $related = HealthTip::where('id', '!=', $id)
+            ->where('is_published', true)
+            ->latest()
+            ->take(3)
+            ->get();
+
+        return response()->json([
+            'tip' => $tip,
+            'related' => $related
+        ]);
     }
 }

@@ -45,7 +45,7 @@ class AdminPromotionController extends Controller
     {
         $validator = Validator::make($request->all(), [
             'title' => 'required|string|max:100',
-            'type' => 'required|in:percentage,fixed_amount',
+            'type' => 'required|in:percentage,fixed_amount,cashback,buy_one_get_one,buy_one_get_gift',
             'discount_value' => 'required|numeric|min:0',
             'promotion_scope' => 'required|in:item,order',
             'min_qty_requirement' => 'required|integer|min:1',
@@ -103,7 +103,7 @@ class AdminPromotionController extends Controller
 
         $validator = Validator::make($request->all(), [
             'title' => 'required|string|max:100',
-            'type' => 'required|in:percentage,fixed_amount',
+            'type' => 'required|in:percentage,fixed_amount,cashback,buy_one_get_one,buy_one_get_gift',
             'discount_value' => 'required|numeric|min:0',
             'promotion_scope' => 'required|in:item,order',
             'min_qty_requirement' => 'required|integer|min:1',

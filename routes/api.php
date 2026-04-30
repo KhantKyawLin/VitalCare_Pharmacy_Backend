@@ -29,6 +29,8 @@ use App\Http\Controllers\Admin\AdminExpiredItemController;
 */
 
 // Products (public browsing)
+Route::get('/products/top-sellers', [ProductController::class, 'topSellers']);
+Route::get('/products/special-offers', [ProductController::class, 'specialOffers']);
 Route::get('/products', [ProductController::class, 'index']);
 Route::get('/products/{id}', [ProductController::class, 'show']);
 Route::get('/categories', [ProductController::class, 'categories']);
@@ -185,6 +187,10 @@ Route::group([
         Route::delete('promotions/{id}', [AdminPromotionController::class, 'destroy']);
     });
 
+    // --- POS (admin + staff) ---
+    Route::get('pos/search', [App\Http\Controllers\Admin\AdminPOSController::class, 'search']);
+    Route::post('pos/checkout', [App\Http\Controllers\Admin\AdminPOSController::class, 'checkout']);
+
     // --- Users (admin only - view & delete, no edit) ---
     Route::group(['middleware' => 'permission:users.view'], function () {
         Route::get('users', [AdminUserController::class, 'index']);
@@ -207,8 +213,11 @@ Route::group([
 
     // --- Health Tips (admin + pharmacist) ---
     Route::group(['middleware' => 'permission:health_tips.crud'], function () {
+        Route::get('health-tips', [AdminHealthTipController::class, 'index']);
+        Route::get('health-tips/{id}', [AdminHealthTipController::class, 'show']);
         Route::post('health-tips', [AdminHealthTipController::class, 'store']);
         Route::put('health-tips/{id}', [AdminHealthTipController::class, 'update']);
+        Route::patch('health-tips/{id}/toggle-status', [AdminHealthTipController::class, 'toggleStatus']);
         Route::delete('health-tips/{id}', [AdminHealthTipController::class, 'destroy']);
     });
 

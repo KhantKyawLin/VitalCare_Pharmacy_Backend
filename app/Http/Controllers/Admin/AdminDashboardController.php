@@ -19,14 +19,14 @@ class AdminDashboardController extends Controller
         $yesterday = now()->subDay()->toDateString();
 
         // Today's sales
-        $todaySales = Order::whereDate('order_date', $today)
-            ->where('order_status', 'completed')
-            ->sum('total_order_amount');
+        $todaySales = Order::whereDate('created_at', $today)
+            ->where('status', 'completed')
+            ->sum('total_amount');
 
         // Yesterday's sales
-        $yesterdaySales = Order::whereDate('order_date', $yesterday)
-            ->where('order_status', 'completed')
-            ->sum('total_order_amount');
+        $yesterdaySales = Order::whereDate('created_at', $yesterday)
+            ->where('status', 'completed')
+            ->sum('total_amount');
 
         // Sales change percentage
         $salesChange = $yesterdaySales > 0
@@ -34,12 +34,13 @@ class AdminDashboardController extends Controller
             : ($todaySales > 0 ? 100 : 0);
 
         // New orders today
-        $newOrders = Order::whereDate('order_date', $today)->count();
+        $newOrders = Order::whereDate('created_at', $today)->count();
 
-        // Low stock count
-        $lowStock = Product::whereRaw(
-            '(SELECT COALESCE(SUM(instock_quantity), 0) FROM product_movements WHERE product_id = products.id AND movement_type IN ("current", "stored") AND (expired_date IS NULL OR expired_date > CURDATE())) <= minimum_quantity'
-        )->count();
+        // Low stock count (Corrected logic: Sum all movements)
+        $lowStock = Product::get()->filter(function($p) {
+            $totalStock = \App\Models\ProductMovement::where('product_id', $p->id)->sum('instock_quantity');
+            return $totalStock <= $p->minimum_quantity;
+        })->count();
 
         // Expiring soon (30 days)
         $expiringSoon = ProductMovement::where('instock_quantity', '>', 0)
@@ -53,7 +54,7 @@ class AdminDashboardController extends Controller
 
         // Recent orders
         $recentOrders = Order::with('user')
-            ->latest('order_date')
+            ->latest('created_at')
             ->take(5)
             ->get();
 
