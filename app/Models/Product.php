@@ -10,7 +10,7 @@ class Product extends Model
     protected $fillable = [
         'name', 'category_id', 'description', 'usage', 'side_effects',
         'dosage', 'unit_id', 'minimum_quantity', 'reorder_status',
-        'is_expired', 'price'
+        'is_expired', 'price', 'is_published'
     ];
 
     public function category() { return $this->belongsTo(Category::class); }

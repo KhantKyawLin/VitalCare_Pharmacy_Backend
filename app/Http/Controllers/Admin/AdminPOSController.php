@@ -131,12 +131,22 @@ class AdminPOSController extends Controller
             ]);
 
             foreach ($request->items as $item) {
-                // 1. Create OrderProduct record
+                // Fetch the latest purchase price from current movements for profitability tracking
+                $latestBatch = ProductMovement::where('product_id', $item['product_id'])
+                    ->whereIn('movement_type', ['current', 'stored'])
+                    ->where('instock_quantity', '>', 0)
+                    ->orderBy('movement_date', 'desc')
+                    ->first();
+                
+                $costPrice = $latestBatch ? $latestBatch->purchase_price : 0;
+
+                // 1. Create OrderProduct record with cost tracking
                 OrderProduct::create([
                     'order_id' => $order->id,
                     'product_id' => $item['product_id'],
                     'quantity' => $item['quantity'],
                     'price' => $item['price'],
+                    'purchase_price' => $costPrice,
                 ]);
 
                 // 2. Deduct inventory via ProductMovement

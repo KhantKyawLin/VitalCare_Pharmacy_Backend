@@ -79,6 +79,7 @@ class AdminProductController extends Controller
             'dosage' => 'nullable|string|max:100',
             'price' => 'nullable|numeric|min:0',
             'minimum_quantity' => 'nullable|integer|min:0',
+            'is_published' => 'nullable|boolean',
             'images' => 'nullable|array|max:5',
             'images.*' => 'image|mimes:jpeg,png,gif|max:2048',
         ]);
@@ -91,7 +92,7 @@ class AdminProductController extends Controller
         try {
             $product = Product::create($request->only([
                 'name', 'category_id', 'unit_id', 'description',
-                'usage', 'side_effects', 'dosage', 'price', 'minimum_quantity'
+                'usage', 'side_effects', 'dosage', 'price', 'minimum_quantity', 'is_published'
             ]));
 
             // Handle image uploads
@@ -132,6 +133,7 @@ class AdminProductController extends Controller
             'products.*.unit_id' => 'required|exists:units,id',
             'products.*.description' => 'nullable|string|max:500',
             'products.*.price' => 'nullable|numeric|min:0',
+            'products.*.is_published' => 'nullable|boolean',
         ]);
 
         if ($validator->fails()) {
@@ -168,8 +170,8 @@ class AdminProductController extends Controller
             'name' => 'sometimes|string|max:100|min:3',
             'category_id' => 'sometimes|exists:categories,id',
             'unit_id' => 'sometimes|exists:units,id',
-            'description' => 'nullable|string|max:500',
             'price' => 'nullable|numeric|min:0',
+            'is_published' => 'nullable|boolean',
             'images' => 'nullable|array|max:5',
             'images.*' => 'image|mimes:jpeg,png,gif|max:2048',
         ]);
@@ -180,7 +182,7 @@ class AdminProductController extends Controller
 
         $product->update($request->only([
             'name', 'category_id', 'unit_id', 'description',
-            'usage', 'side_effects', 'dosage', 'price', 'minimum_quantity'
+            'usage', 'side_effects', 'dosage', 'price', 'minimum_quantity', 'is_published'
         ]));
 
         // If price was updated, sync it to all active/in-stock batches
@@ -254,5 +256,23 @@ class AdminProductController extends Controller
         }
 
         return response()->json($query->limit(10)->get());
+    }
+
+    /**
+     * Toggle product publication status.
+     */
+    public function togglePublish($id)
+    {
+        $product = Product::findOrFail($id);
+        $product->is_published = !$product->is_published;
+        $product->save();
+
+        $status = $product->is_published ? 'published' : 'unpublished';
+        ActivityLog::log('updated', 'Product', $product->id, "Product '{$product->name}' has been {$status}");
+
+        return response()->json([
+            'message' => "Product " . ($product->is_published ? "published" : "unpublished") . " successfully",
+            'is_published' => $product->is_published
+        ]);
     }
 }

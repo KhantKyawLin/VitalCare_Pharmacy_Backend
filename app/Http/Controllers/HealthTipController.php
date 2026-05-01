@@ -18,7 +18,7 @@ class HealthTipController extends Controller
 
     public function show($id)
     {
-        $tip = HealthTip::with('author')
+        $tip = HealthTip::with(['author', 'feedbacks.user'])
             ->where('is_published', true)
             ->findOrFail($id);
 
@@ -28,9 +28,17 @@ class HealthTipController extends Controller
             ->take(3)
             ->get();
 
+        // Popular tips based on rating or just latest for now but named popular
+        $popular = HealthTip::withCount('feedbacks')
+            ->where('is_published', true)
+            ->orderBy('feedbacks_count', 'desc')
+            ->take(3)
+            ->get();
+
         return response()->json([
             'tip' => $tip,
-            'related' => $related
+            'related' => $related,
+            'popular' => $popular
         ]);
     }
 }

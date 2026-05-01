@@ -4,6 +4,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\ProductController;
+use App\Http\Controllers\HealthTipController;
 use App\Http\Controllers\FeedbackController;
 use App\Http\Controllers\ContactUsController;
 use App\Http\Controllers\SearchController;
@@ -15,12 +16,14 @@ use App\Http\Controllers\Admin\AdminUnitController;
 use App\Http\Controllers\Admin\AdminOrderController;
 use App\Http\Controllers\Admin\AdminSupplierController;
 use App\Http\Controllers\Admin\AdminInventoryController;
+use App\Http\Controllers\Admin\AdminReportController;
 use App\Http\Controllers\Admin\AdminPromotionController;
 use App\Http\Controllers\Admin\AdminUserController;
 use App\Http\Controllers\Admin\AdminHealthTipController;
 use App\Http\Controllers\Admin\AdminDashboardController;
 use App\Http\Controllers\Admin\AdminRoleController;
 use App\Http\Controllers\Admin\AdminExpiredItemController;
+use App\Http\Controllers\Admin\AdminExternalTransactionController;
 
 /*
 |--------------------------------------------------------------------------
@@ -36,8 +39,9 @@ Route::get('/products/{id}', [ProductController::class, 'show']);
 Route::get('/categories', [ProductController::class, 'categories']);
 
 // Health Tips (public browsing)
-Route::get('/health-tips', [\App\Http\Controllers\HealthTipController::class, 'index']);
-Route::get('/health-tips/{id}', [\App\Http\Controllers\HealthTipController::class, 'show']);
+Route::get('/health-tips', [HealthTipController::class, 'index']);
+Route::get('/health-tips/{id}', [HealthTipController::class, 'show']);
+Route::post('/health-tips/{id}/feedback', [FeedbackController::class, 'store'])->middleware('auth:api');
 
 // Health Tip Feedbacks (public read)
 Route::get('/health-tips/{id}/feedbacks', [FeedbackController::class, 'index']);
@@ -118,6 +122,24 @@ Route::group([
     Route::get('activity-logs', [AdminDashboardController::class, 'activityLogs'])
         ->middleware('permission:activity_logs.view');
 
+    // --- Financial Reports (admin only) ---
+    Route::group(['prefix' => 'reports', 'middleware' => 'permission:dashboard.view'], function () {
+        Route::get('/overview', [AdminReportController::class, 'index']);
+        Route::get('/charts', [AdminReportController::class, 'chartData']);
+        Route::get('/losses', [AdminReportController::class, 'lossBreakdown']);
+        Route::get('/top-profitable', [AdminReportController::class, 'topProfitableProducts']);
+        Route::get('/detailed-ledger', [AdminReportController::class, 'detailedProfitRecords']);
+    });
+
+    // --- External Transactions (expenses/income tracking) ---
+    Route::group(['prefix' => 'external-transactions', 'middleware' => 'permission:dashboard.view'], function () {
+        Route::get('/', [AdminExternalTransactionController::class, 'index']);
+        Route::get('/categories', [AdminExternalTransactionController::class, 'categories']);
+        Route::post('/', [AdminExternalTransactionController::class, 'store']);
+        Route::put('/{id}', [AdminExternalTransactionController::class, 'update']);
+        Route::delete('/{id}', [AdminExternalTransactionController::class, 'destroy']);
+    });
+
     // --- Products (admin + staff) ---
     Route::group(['middleware' => 'permission:products.crud'], function () {
         Route::get('products', [AdminProductController::class, 'index']);
@@ -125,6 +147,7 @@ Route::group([
         Route::post('products', [AdminProductController::class, 'store']);
         Route::post('products/bulk', [AdminProductController::class, 'bulkStore']);
         Route::put('products/{id}', [AdminProductController::class, 'update']);
+        Route::patch('products/{id}/toggle-publish', [AdminProductController::class, 'togglePublish']);
         Route::delete('products/{id}', [AdminProductController::class, 'destroy']);
         Route::get('products-search', [AdminProductController::class, 'search']);
     });
