@@ -167,46 +167,51 @@ class AdminReportController extends Controller
 
         $records = collect();
 
-        // 1. Sales Records (Aggregated by Order/Product)
+        // 1. Sales Records (Grouped by Order)
         if ($type === 'all' || $type === 'sales') {
-            $sales = OrderProduct::with(['order', 'product'])
-                ->whereHas('order', function($q) use ($startDate, $endDate) {
-                    $q->whereBetween('created_at', [$startDate, $endDate])
-                      ->where('status', 'completed');
-                })
-                ->get()
-                ->map(function($op) {
-                    return [
-                        'date' => $op->order->created_at->toDateTimeString(),
-                        'type' => 'Sale',
-                        'category' => $op->product->category->name ?? 'General',
-                        'title' => $op->product->name . " (x" . $op->quantity . ")",
-                        'revenue' => (float)($op->price * $op->quantity),
-                        'cost' => (float)($op->purchase_price * $op->quantity),
-                        'profit_impact' => (float)(($op->price - $op->purchase_price) * $op->quantity),
-                        'reference' => $op->order->receipt_number
-                    ];
-                });
-            $records = $records->concat($sales);
-            
-            // Fetch Order-Level Discounts
-            $discounts = Order::whereBetween('created_at', [$startDate, $endDate])
+            $orders = Order::with(['orderProducts.product.category'])
+                ->whereBetween('created_at', [$startDate, $endDate])
                 ->where('status', 'completed')
-                ->where('discount_amount', '>', 0)
                 ->get()
                 ->map(function($order) {
+                    $items = $order->orderProducts->map(function($op) {
+                        // If original_price wasn't recorded (older records), use price
+                        $origPrice = $op->original_price ?? $op->price;
+                        return [
+                            'product_name' => $op->product->name ?? 'Unknown',
+                            'category' => $op->product->category->name ?? 'General',
+                            'quantity' => $op->quantity,
+                            'price' => (float)$op->price,
+                            'original_price' => (float)$origPrice,
+                            'purchase_price' => (float)$op->purchase_price,
+                            'subtotal' => (float)($op->price * $op->quantity),
+                            'original_subtotal' => (float)($origPrice * $op->quantity),
+                            'total_cost' => (float)($op->purchase_price * $op->quantity),
+                        ];
+                    });
+                    
+                    $potentialRevenue = $items->sum('original_subtotal');
+                    $netRevenue = (float)$order->total_amount;
+                    $totalDiscount = $potentialRevenue - $netRevenue;
+                    $totalCost = $items->sum('total_cost');
+                    $grossProfit = $netRevenue - $totalCost;
+
                     return [
+                        'id' => 'ORD-' . $order->id,
                         'date' => $order->created_at->toDateTimeString(),
-                        'type' => 'Sale Discount',
-                        'category' => 'Promotion',
-                        'title' => 'Order Discount Applied',
-                        'revenue' => 0,
-                        'cost' => (float)$order->discount_amount,
-                        'profit_impact' => -(float)$order->discount_amount,
-                        'reference' => $order->receipt_number
+                        'type' => 'Sale Order',
+                        'category' => 'POS Sale',
+                        'title' => 'Order ' . $order->receipt_number,
+                        'reference' => $order->receipt_number,
+                        'items' => $items,
+                        'subtotal' => $potentialRevenue, // Normal Price * Qty
+                        'discount' => $totalDiscount,    // Total Reduction (Item + Order)
+                        'revenue' => $netRevenue,        // Final Cash In
+                        'cost' => $totalCost,
+                        'profit_impact' => $grossProfit,
                     ];
                 });
-            $records = $records->concat($discounts);
+            $records = $records->concat($orders);
         }
 
         // 2. Inventory Losses
