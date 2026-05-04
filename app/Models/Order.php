@@ -9,7 +9,8 @@ class Order extends Model
         'user_id', 'address_id', 'total_amount', 'slip_image', 'status',
         'order_type', 'discount_amount', 'tax_amount', 'received_amount',
         'change_return', 'receipt_number', 'cashier_id',
-        'delivery_address', 'contact_phone', 'payment_method'
+        'delivery_address', 'contact_phone', 'payment_method',
+        'deliver_status', 'payment_status'
     ];
 
     protected $casts = [

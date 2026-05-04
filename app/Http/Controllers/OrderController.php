@@ -188,6 +188,30 @@ class OrderController extends Controller
                 ], 422);
             }
 
+            // 5. Apply Order-Level Promotions (Global discounts)
+            $orderPromo = \App\Models\Promotion::active()
+                ->where('promotion_scope', 'order')
+                ->where('min_order_value', '<=', $totalAmount)
+                ->first();
+            
+            if ($orderPromo) {
+                $orderDiscount = 0;
+                $val = (float)$orderPromo->discount_value;
+                if ($orderPromo->type === 'percentage') {
+                    $orderDiscount = $totalAmount * ($val / 100);
+                } elseif ($orderPromo->type === 'fixed_amount') {
+                    $orderDiscount = min($totalAmount, $val);
+                }
+
+                // Apply max discount cap if defined
+                if ($orderPromo->max_discount_amount > 0) {
+                    $orderDiscount = min($orderDiscount, $orderPromo->max_discount_amount);
+                }
+
+                $totalAmount -= $orderDiscount;
+                $totalDiscount += $orderDiscount;
+            }
+
             $order = Order::create([
                 'user_id' => $user->id,
                 'order_type' => 'online',

@@ -34,20 +34,50 @@ class AdminOrderController extends Controller
 
     public function update(Request $request, $id)
     {
-        $order = Order::findOrFail($id);
+        $order = Order::with('orderProducts')->findOrFail($id);
         $old = $order->toArray();
 
         $request->validate([
             'status' => 'sometimes|in:pending,completed,cancelled',
             'deliver_status' => 'sometimes|in:pending,shipped,delivered,returned',
             'payment_status' => 'sometimes|in:pending,paid,refunded',
+            'refund_reason' => 'nullable|string',
         ]);
 
-        $order->update($request->only(['status', 'deliver_status', 'payment_status']));
+        $newPaymentStatus = $request->payment_status;
+        $isNewRefund = ($newPaymentStatus === 'refunded' && $order->payment_status !== 'refunded');
 
-        ActivityLog::log('updated', 'Order', $id, "Order #$id status updated", $old, $order->toArray());
+        \DB::beginTransaction();
+        try {
+            $updateData = $request->only(['status', 'deliver_status', 'payment_status', 'refund_reason']);
+            
+            if ($isNewRefund) {
+                $updateData['refunded_at'] = now();
+                $updateData['refunded_by'] = auth()->id();
 
-        return response()->json(['message' => 'Order updated', 'order' => $order]);
+                // Reverse inventory for all products in this order
+                foreach ($order->orderProducts as $item) {
+                    \App\Models\ProductMovement::create([
+                        'product_id' => $item->product_id,
+                        'movement_type' => 'returned',
+                        'instock_quantity' => $item->quantity,
+                        'movement_date' => now(),
+                        'created_by' => auth()->id(),
+                        'sale_price' => $item->price,
+                    ]);
+                }
+            }
+
+            $order->update($updateData);
+            
+            ActivityLog::log('updated', 'Order', $id, "Order #$id status updated", $old, $order->toArray());
+
+            \DB::commit();
+            return response()->json(['message' => 'Order updated successfully', 'order' => $order]);
+        } catch (\Exception $e) {
+            \DB::rollBack();
+            return response()->json(['message' => 'Failed to update order: ' . $e->getMessage()], 500);
+        }
     }
 
     public function destroy($id)

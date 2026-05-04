@@ -146,6 +146,8 @@ class AdminPOSController extends Controller
                 'received_amount' => $request->received_amount,
                 'change_return' => $request->change_return,
                 'status' => 'completed',
+                'deliver_status' => 'delivered',
+                'payment_status' => 'paid',
                 'receipt_number' => $receiptNumber,
                 'cashier_id' => auth()->id(),
             ]);
