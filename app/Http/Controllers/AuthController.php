@@ -110,6 +110,7 @@ class AuthController extends Controller
             'phone' => 'sometimes|string|max:50',
             'address' => 'sometimes|string',
             'gender' => 'sometimes|in:male,female,others',
+            'current_password' => 'required_with:password|string',
             'password' => 'sometimes|string|min:6|confirmed',
         ]);
         if ($validator->fails()) return response()->json($validator->errors(), 422);
@@ -117,17 +118,25 @@ class AuthController extends Controller
         $data = $request->only(['name', 'phone', 'address', 'gender']);
 
         if ($request->has('password')) {
+            // Check current password
+            if (!Hash::check($request->current_password, $user->password)) {
+                return response()->json(['current_password' => ['The current password does not match our records.']], 422);
+            }
             $data['password'] = Hash::make($request->password);
         }
 
         // Handle profile image upload
-        if ($request->hasFile('profile')) {
-            $data['profile'] = $request->file('profile')->store('profiles', 'public');
+        if ($request->hasFile('profile_image')) {
+            $data['profile'] = $request->file('profile_image')->store('profiles', 'public');
         }
 
         $user->update($data);
 
-        return response()->json(['message' => 'Profile updated', 'user' => $user->fresh()]);
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Profile updated successfully', 
+            'user' => $user->fresh()
+        ]);
     }
 
     /**

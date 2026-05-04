@@ -71,14 +71,29 @@ class RbacSeeder extends Seeder
             Permission::all()->pluck('id')->toArray()
         );
 
-        // Staff permissions
-        $staffPerms = ['products.crud', 'categories.crud', 'units.crud', 'orders.manage', 'promotions.crud', 'inventory.manage'];
+        // Staff permissions (Focused on Sales and Inventory lookup)
+        $staffPerms = [
+            'products.crud', 
+            'categories.crud', 
+            'units.crud', 
+            'orders.manage', 
+            'inventory.manage'
+        ];
         $staffRole->permissions()->sync(
             Permission::whereIn('name', $staffPerms)->pluck('id')->toArray()
         );
 
-        // Pharmacist permissions
-        $pharmacistPerms = ['health_tips.crud'];
+        // Pharmacist permissions (Head of Operations - Health + Inventory)
+        $pharmacistPerms = [
+            'dashboard.view',
+            'products.crud', 
+            'categories.crud', 
+            'units.crud', 
+            'inventory.manage',
+            'health_tips.crud',
+            'promotions.crud',
+            'orders.manage'
+        ];
         $pharmacistRole->permissions()->sync(
             Permission::whereIn('name', $pharmacistPerms)->pluck('id')->toArray()
         );
@@ -101,7 +116,8 @@ class RbacSeeder extends Seeder
             SiteSetting::set($key, $value);
         }
 
-        // --- 5. Create/Update Default Admin User ---
+        // --- 5. Create Default Users ---
+        // Admin
         \App\Models\User::updateOrCreate(
             ['email' => 'admin@vitalcare.com'],
             [
@@ -112,6 +128,48 @@ class RbacSeeder extends Seeder
                 'gender'   => 'male',
                 'phone'    => '09123456789',
                 'address'  => 'Pharmacy Headquarters',
+            ]
+        );
+
+        // Customer
+        \App\Models\User::updateOrCreate(
+            ['email' => 'customer@vitalcare.com'],
+            [
+                'name'     => 'John Customer',
+                'password' => \Illuminate\Support\Facades\Hash::make('password123'),
+                'role'     => 'user',
+                'role_id'  => $userRole->id,
+                'gender'   => 'male',
+                'phone'    => '09777777777',
+                'address'  => '123 Health Street, Wellness City',
+            ]
+        );
+
+        // Staff
+        \App\Models\User::updateOrCreate(
+            ['email' => 'staff@vitalcare.com'],
+            [
+                'name'     => 'Sarah Staff',
+                'password' => \Illuminate\Support\Facades\Hash::make('password123'),
+                'role'     => 'staff',
+                'role_id'  => $staffRole->id,
+                'gender'   => 'female',
+                'phone'    => '09555555555',
+                'address'  => 'Staff Quarters, Vital Care',
+            ]
+        );
+
+        // Pharmacist
+        \App\Models\User::updateOrCreate(
+            ['email' => 'pharmacist@vitalcare.com'],
+            [
+                'name'     => 'Dr. Phil Pharmacist',
+                'password' => \Illuminate\Support\Facades\Hash::make('password123'),
+                'role'     => 'pharmacist',
+                'role_id'  => $pharmacistRole->id,
+                'gender'   => 'male',
+                'phone'    => '09888888888',
+                'address'  => 'Wellness Plaza, Suite 402',
             ]
         );
 

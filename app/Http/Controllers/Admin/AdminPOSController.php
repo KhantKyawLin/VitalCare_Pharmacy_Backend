@@ -22,20 +22,27 @@ class AdminPOSController extends Controller
     {
         $query = $request->get('q');
         
+        $promotionFilter = function($q) {
+            $q->where('is_active', true)
+              ->where('start_date', '<=', now())
+              ->where('end_date', '>=', now())
+              ->with('giftProduct');
+        };
+
         if (!$query) {
-            $products = Product::with(['category', 'promotions', 'movements'])->limit(20)->get();
+            $products = Product::with(['category', 'promotions' => $promotionFilter, 'movements'])->limit(20)->get();
             return response()->json($this->attachStock($products));
         }
 
         // 1. Try exact ID match first (barcode = product ID)
-        $exactProduct = Product::with(['category', 'promotions', 'movements'])->find($query);
+        $exactProduct = Product::with(['category', 'promotions' => $promotionFilter, 'movements'])->find($query);
         
         if ($exactProduct) {
             return response()->json($this->attachStock(collect([$exactProduct])));
         }
 
         // 2. Fallback to name search
-        $products = Product::with(['category', 'promotions', 'movements'])
+        $products = Product::with(['category', 'promotions' => $promotionFilter, 'movements'])
             ->where('name', 'like', '%' . $query . '%')
             ->limit(10)
             ->get();
@@ -56,6 +63,19 @@ class AdminPOSController extends Controller
                     : $sum + (int)$m->instock_quantity; // instock_quantity is negative for sold-out
             }, 0);
             
+            // --- PRICE LOGIC ---
+            // If price is not set manually, use 10% markup of latest purchase price
+            if (!$product->price || $product->price <= 0) {
+                $latestMovement = $movements->whereIn('movement_type', ['current', 'stored'])
+                    ->where('purchase_price', '>', 0)
+                    ->sortByDesc('id')
+                    ->first();
+                
+                if ($latestMovement) {
+                    $product->price = $latestMovement->purchase_price * 1.10;
+                }
+            }
+
             $product->current_stock = $stock;
             unset($product->movements); // Don't send full movements to frontend
             return $product;
@@ -151,6 +171,7 @@ class AdminPOSController extends Controller
                     'price' => $item['price'],
                     'original_price' => $standardPrice,
                     'purchase_price' => $costPrice,
+                    'is_gift' => isset($item['isGift']) && $item['isGift'],
                 ]);
 
                 // 2. Deduct inventory via ProductMovement

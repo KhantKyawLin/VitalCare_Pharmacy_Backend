@@ -10,6 +10,7 @@ class Promotion extends Model
     protected $fillable = [
         'title', 'type', 'description', 'discount_value',
         'promotion_scope', 'min_qty_requirement', 'min_order_value', 'max_usage_per_bill',
+        'gift_product_id', 'gift_qty', 'max_discount_amount',
         'start_date', 'end_date', 'is_active'
     ];
 
@@ -22,6 +23,11 @@ class Promotion extends Model
     public function products()
     {
         return $this->belongsToMany(Product::class, 'promotion_products');
+    }
+
+    public function giftProduct()
+    {
+        return $this->belongsTo(Product::class, 'gift_product_id');
     }
 
     public function scopeActive($query)

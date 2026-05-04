@@ -23,13 +23,26 @@ class AdminPromotionController extends Controller
     public function products()
     {
         // For the product selection table when creating item-scoped promotions
-        $products = Product::with('category')->get()->map(function($product) {
+        $products = Product::with(['category', 'movements' => function($q) {
+            $q->whereIn('movement_type', ['current', 'stored'])->where('purchase_price', '>', 0)->latest('id');
+        }])->get()->map(function($product) {
+            $price = $product->price;
+            
+            // Logic: If price is not set, use 10% markup of latest purchase price
+            if (!$price || $price <= 0) {
+                $latestMovement = $product->movements->first();
+                if ($latestMovement) {
+                    $purchasePrice = $latestMovement->purchase_price;
+                    $price = $purchasePrice * 1.10; // 10% profit margin
+                }
+            }
+
             return [
                 'id' => $product->id,
                 'name' => $product->name,
                 'category_name' => $product->category ? $product->category->name : 'N/A',
                 'category_id' => $product->category_id,
-                'price' => $product->price,
+                'price' => $price,
                 // Include any active promotion info to prevent overlaps
                 'active_promotions' => $product->promotions()->active()->get(['promotions.id', 'title'])
             ];
@@ -46,11 +59,14 @@ class AdminPromotionController extends Controller
         $validator = Validator::make($request->all(), [
             'title' => 'required|string|max:100',
             'type' => 'required|in:percentage,fixed_amount,cashback,buy_one_get_one,buy_one_get_gift',
-            'discount_value' => 'required|numeric|min:0',
+            'discount_value' => 'required_unless:type,buy_one_get_one,buy_one_get_gift|numeric|min:0',
             'promotion_scope' => 'required|in:item,order',
             'min_qty_requirement' => 'required|integer|min:1',
             'min_order_value' => 'required_if:promotion_scope,order|numeric|min:0',
             'max_usage_per_bill' => 'nullable|integer|min:1',
+            'gift_product_id' => 'required_if:type,buy_one_get_gift|nullable|exists:products,id',
+            'gift_qty' => 'required_if:type,buy_one_get_one,buy_one_get_gift|integer|min:0',
+            'max_discount_amount' => 'nullable|numeric|min:0',
             'start_date' => 'required|date',
             'end_date' => 'required|date|after_or_equal:start_date',
             'is_active' => 'boolean',
@@ -66,6 +82,7 @@ class AdminPromotionController extends Controller
             $promotion = Promotion::create($request->only([
                 'title', 'type', 'description', 'discount_value', 
                 'promotion_scope', 'min_qty_requirement', 'min_order_value', 'max_usage_per_bill',
+                'gift_product_id', 'gift_qty', 'max_discount_amount',
                 'start_date', 'end_date', 'is_active'
             ]));
 
@@ -104,11 +121,14 @@ class AdminPromotionController extends Controller
         $validator = Validator::make($request->all(), [
             'title' => 'required|string|max:100',
             'type' => 'required|in:percentage,fixed_amount,cashback,buy_one_get_one,buy_one_get_gift',
-            'discount_value' => 'required|numeric|min:0',
+            'discount_value' => 'required_unless:type,buy_one_get_one,buy_one_get_gift|numeric|min:0',
             'promotion_scope' => 'required|in:item,order',
             'min_qty_requirement' => 'required|integer|min:1',
             'min_order_value' => 'required_if:promotion_scope,order|numeric|min:0',
             'max_usage_per_bill' => 'nullable|integer|min:1',
+            'gift_product_id' => 'required_if:type,buy_one_get_gift|nullable|exists:products,id',
+            'gift_qty' => 'required_if:type,buy_one_get_one,buy_one_get_gift|integer|min:0',
+            'max_discount_amount' => 'nullable|numeric|min:0',
             'start_date' => 'required|date',
             'end_date' => 'required|date|after_or_equal:start_date',
             'is_active' => 'boolean',
@@ -124,6 +144,7 @@ class AdminPromotionController extends Controller
             $promotion->update($request->only([
                 'title', 'type', 'description', 'discount_value', 
                 'promotion_scope', 'min_qty_requirement', 'min_order_value', 'max_usage_per_bill',
+                'gift_product_id', 'gift_qty', 'max_discount_amount',
                 'start_date', 'end_date', 'is_active'
             ]));
 

@@ -72,6 +72,7 @@ Route::group(['prefix' => 'auth'], function ($router) {
         Route::post('refresh', [AuthController::class, 'refresh']);
         Route::get('me', [AuthController::class, 'me']);
         Route::put('profile', [AuthController::class, 'updateProfile']);
+        Route::post('profile', [AuthController::class, 'updateProfile']); // POST for file uploads
 
         // Cart Routes
         Route::get('cart', [\App\Http\Controllers\CartController::class, 'index']);
