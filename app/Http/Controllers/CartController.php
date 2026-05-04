@@ -15,7 +15,7 @@ class CartController extends Controller
             return response()->json(['message' => 'Unauthorized'], 401);
         }
 
-        $cart = Cart::with(['items.product'])->firstOrCreate(['user_id' => $user->id]);
+        $cart = Cart::with(['items.product.pictures'])->firstOrCreate(['user_id' => $user->id]);
 
         return response()->json($cart);
     }
@@ -39,9 +39,16 @@ class CartController extends Controller
             ->first();
 
         if ($cartItem) {
-            $cartItem->quantity += $request->quantity;
+            $newQty = $cartItem->quantity + $request->quantity;
+            if ($newQty > 5) {
+                return response()->json(['message' => 'Maximum quantity per product is 5.'], 422);
+            }
+            $cartItem->quantity = $newQty;
             $cartItem->save();
         } else {
+            if ($request->quantity > 5) {
+                return response()->json(['message' => 'Maximum quantity per product is 5.'], 422);
+            }
             $cartItem = CartItem::create([
                 'cart_id' => $cart->id,
                 'product_id' => $request->product_id,
@@ -86,7 +93,7 @@ class CartController extends Controller
         }
 
         $request->validate([
-            'quantity' => 'required|integer|min:1',
+            'quantity' => 'required|integer|min:1|max:5',
         ]);
 
         $cart = Cart::where('user_id', $user->id)->first();

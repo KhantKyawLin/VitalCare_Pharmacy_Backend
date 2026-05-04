@@ -16,7 +16,7 @@ class WishlistController extends Controller
         }
 
         $wishlists = Wishlist::where('user_id', $user->id)
-            ->with('product')
+            ->with('product.pictures')
             ->get();
 
         return response()->json($wishlists);

@@ -21,4 +21,26 @@ class Product extends Model
     public function movements() { return $this->hasMany(ProductMovement::class); }
     public function promotions() { return $this->belongsToMany(Promotion::class, 'promotion_products'); }
     public function suppliers() { return $this->belongsToMany(Supplier::class, 'supply_products'); }
+
+    /**
+     * Get the price of the product, applying 10% markup if price is 0.
+     */
+    public function getEffectivePrice()
+    {
+        if ($this->price && (float)$this->price > 0) {
+            return (float)$this->price;
+        }
+
+        $latestMovement = ProductMovement::where('product_id', $this->id)
+            ->whereIn('movement_type', ['current', 'stored'])
+            ->where('purchase_price', '>', 0)
+            ->orderBy('id', 'desc')
+            ->first();
+
+        if ($latestMovement) {
+            return (float)$latestMovement->purchase_price * 1.10;
+        }
+
+        return 0;
+    }
 }

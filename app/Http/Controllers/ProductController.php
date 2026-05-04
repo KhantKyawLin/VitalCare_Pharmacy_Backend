@@ -23,7 +23,6 @@ class ProductController extends Controller
 
         if ($request->filled('type')) {
             if ($request->type === 'top_sellers') {
-                // For showcase, order by latest or add specific top seller logic
                 $query->latest(); 
             } elseif ($request->type === 'promotions') {
                 $query->whereHas('promotions');
@@ -31,29 +30,32 @@ class ProductController extends Controller
         }
 
         $products = $query->paginate(12);
+        $this->applyMarkupToCollection($products->getCollection());
+        
         return response()->json($products);
     }
 
     public function topSellers()
     {
-        // For showcase, we order by ID or order_products count if available
-        // Assuming orderProducts relationship exists in Product model
         $products = Product::with(['category', 'pictures', 'unit', 'promotions'])
             ->where('is_published', true)
             ->latest()
             ->take(10)
             ->get();
+        
+        $this->applyMarkupToCollection($products);
         return response()->json($products);
     }
 
     public function specialOffers()
     {
-        // Products that have at least one promotion
         $products = Product::with(['category', 'pictures', 'unit', 'promotions'])
             ->where('is_published', true)
             ->whereHas('promotions')
             ->take(10)
             ->get();
+            
+        $this->applyMarkupToCollection($products);
         return response()->json($products);
     }
 
@@ -66,12 +68,16 @@ class ProductController extends Controller
             return response()->json(['message' => 'Product not found'], 404);
         }
 
-        // Fetch related products from the same category
+        $this->applyMarkup($product);
+
+        // Fetch related products
         $related = Product::with(['category', 'pictures', 'unit', 'promotions'])
             ->where('category_id', $product->category_id)
             ->where('id', '!=', $id)
             ->take(5)
             ->get();
+        
+        $this->applyMarkupToCollection($related);
 
         return response()->json([
             'product' => $product,
@@ -83,5 +89,17 @@ class ProductController extends Controller
     {
         $categories = Category::all();
         return response()->json($categories);
+    }
+
+    private function applyMarkupToCollection($products)
+    {
+        foreach ($products as $product) {
+            $product->price = $product->getEffectivePrice();
+        }
+    }
+
+    private function applyMarkup($product)
+    {
+        $product->price = $product->getEffectivePrice();
     }
 }
