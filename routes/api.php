@@ -24,6 +24,7 @@ use App\Http\Controllers\Admin\AdminDashboardController;
 use App\Http\Controllers\Admin\AdminRoleController;
 use App\Http\Controllers\Admin\AdminExpiredItemController;
 use App\Http\Controllers\Admin\AdminExternalTransactionController;
+use App\Http\Controllers\Admin\AdminActivityLogController;
 
 /*
 |--------------------------------------------------------------------------
@@ -121,8 +122,12 @@ Route::group([
         ->middleware('permission:site_settings.manage');
 
     // --- Activity Logs (admin only) ---
-    Route::get('activity-logs', [AdminDashboardController::class, 'activityLogs'])
-        ->middleware('permission:activity_logs.view');
+    Route::group(['prefix' => 'activity-logs', 'middleware' => 'permission:activity_logs.view'], function () {
+        Route::get('/', [AdminActivityLogController::class, 'index']);
+        Route::get('/filters', [AdminActivityLogController::class, 'filters']);
+        Route::delete('/cleanup', [AdminActivityLogController::class, 'cleanup'])
+            ->middleware('role:admin'); // Only admin can cleanup
+    });
 
     // --- Financial Reports (admin only) ---
     Route::group(['prefix' => 'reports', 'middleware' => 'permission:dashboard.view'], function () {

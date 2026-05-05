@@ -105,16 +105,4 @@ class AdminDashboardController extends Controller
             'settings' => SiteSetting::all()->pluck('value', 'key')
         ]);
     }
-
-    /**
-     * Activity logs.
-     */
-    public function activityLogs(Request $request)
-    {
-        return response()->json(
-            ActivityLog::with('user')
-                ->latest('created_at')
-                ->paginate($request->get('per_page', 20))
-        );
-    }
 }

@@ -35,9 +35,16 @@ class AdminReportController extends Controller
 
         $revenue = (float)$salesData->gross_revenue - (float)$discounts;
         $cogs = (float)$salesData->cogs;
-        $grossProfit = $revenue - $cogs;
 
-        // 2. Adjustments (Losses)
+        // 2. Refunds
+        $refunds = Order::whereBetween('created_at', [$dateRange['start'], $dateRange['end']])
+            ->where('status', 'refunded')
+            ->sum('total_amount');
+
+        $netRevenue = $revenue - $refunds;
+        $grossProfit = $netRevenue - $cogs;
+
+        // 3. Adjustments (Losses)
         $losses = InventoryAdjustment::whereBetween('created_at', [$dateRange['start'], $dateRange['end']])
             ->whereIn('reason', ['expired', 'damaged', 'lost'])
             ->sum('financial_value');
@@ -73,7 +80,9 @@ class AdminReportController extends Controller
 
         return response()->json([
             'summary' => [
-                'total_revenue' => $revenue,
+                'total_revenue' => $netRevenue,
+                'gross_revenue' => $revenue,
+                'total_refunds' => (float)$refunds,
                 'total_cogs' => $cogs,
                 'gross_profit' => $grossProfit,
                 'total_losses' => (float)abs($losses),
@@ -81,7 +90,7 @@ class AdminReportController extends Controller
                 'external_income' => (float)$externalIncome,
                 'net_profit' => $netProfit,
                 'revenue_trend' => round($revenueTrend, 1),
-                'margin' => $revenue > 0 ? round(($grossProfit / $revenue) * 100, 1) : 0
+                'margin' => $netRevenue > 0 ? round(($grossProfit / $netRevenue) * 100, 1) : 0
             ],
             'period' => [
                 'start' => $dateRange['start']->toDateString(),
@@ -171,11 +180,11 @@ class AdminReportController extends Controller
         if ($type === 'all' || $type === 'sales') {
             $orders = Order::with(['orderProducts.product.category'])
                 ->whereBetween('created_at', [$startDate, $endDate])
-                ->where('status', 'completed')
+                ->whereIn('status', ['completed', 'refunded'])
                 ->get()
                 ->map(function($order) {
+                    $isRefunded = $order->status === 'refunded';
                     $items = $order->orderProducts->map(function($op) {
-                        // If original_price wasn't recorded (older records), use price
                         $origPrice = $op->original_price ?? $op->price;
                         return [
                             'product_name' => $op->product->name ?? 'Unknown',
@@ -194,20 +203,23 @@ class AdminReportController extends Controller
                     $netRevenue = (float)$order->total_amount;
                     $totalDiscount = $potentialRevenue - $netRevenue;
                     $totalCost = $items->sum('total_cost');
-                    $grossProfit = $netRevenue - $totalCost;
+                    
+                    // If refunded, the revenue is lost, but cost is still there (unless inventory restocked, 
+                    // but for P&L we treat the sale as negated)
+                    $grossProfit = $isRefunded ? -$netRevenue : ($netRevenue - $totalCost);
 
                     return [
                         'id' => 'ORD-' . $order->id,
                         'date' => $order->created_at->toDateTimeString(),
-                        'type' => 'Sale Order',
-                        'category' => 'POS Sale',
-                        'title' => 'Order ' . $order->receipt_number,
+                        'type' => $isRefunded ? 'Refunded Order' : 'Sale Order',
+                        'category' => $isRefunded ? 'Refund' : 'POS Sale',
+                        'title' => ($isRefunded ? '[REFUNDED] ' : '') . 'Order ' . $order->receipt_number,
                         'reference' => $order->receipt_number,
                         'items' => $items,
-                        'subtotal' => $potentialRevenue, // Normal Price * Qty
-                        'discount' => $totalDiscount,    // Total Reduction (Item + Order)
-                        'revenue' => $netRevenue,        // Final Cash In
-                        'cost' => $totalCost,
+                        'subtotal' => $isRefunded ? -$potentialRevenue : $potentialRevenue,
+                        'discount' => $isRefunded ? 0 : $totalDiscount,
+                        'revenue' => $isRefunded ? -$netRevenue : $netRevenue,
+                        'cost' => $isRefunded ? 0 : $totalCost,
                         'profit_impact' => $grossProfit,
                     ];
                 });
