@@ -20,9 +20,11 @@ class AdminUserController extends Controller
      */
     public function index(Request $request)
     {
-        $query = User::query();
+        $query = User::withCount(['passwordResetRequests as pending_resets_count' => function ($query) {
+            $query->where('status', 'pending');
+        }]);
 
-        if ($request->has('role')) {
+        if ($request->filled('role')) {
             $query->where('role', $request->role);
         }
         if ($request->has('search')) {
@@ -133,7 +135,10 @@ class AdminUserController extends Controller
         $user = User::findOrFail($id);
         $password = $this->generateRandomPassword();
 
-        $user->update(['password' => Hash::make($password)]);
+        $user->update([
+            'password' => Hash::make($password),
+            'must_change_password' => true
+        ]);
 
         // Mark any pending reset requests as completed
         PasswordResetRequest::where('user_id', $id)

@@ -140,6 +140,33 @@ class AuthController extends Controller
     }
 
     /**
+     * Force user to change their password (used after manual admin reset).
+     */
+    public function forceChangePassword(Request $request)
+    {
+        $user = auth('api')->user();
+
+        if (!$user->must_change_password) {
+            return response()->json(['message' => 'Password change is not required.'], 400);
+        }
+
+        $validator = Validator::make($request->all(), [
+            'password' => 'required|string|min:6|confirmed',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json($validator->errors(), 422);
+        }
+
+        $user->update([
+            'password' => Hash::make($request->password),
+            'must_change_password' => false
+        ]);
+
+        return response()->json(['message' => 'Password updated successfully.']);
+    }
+
+    /**
      * Forgot password — creates a reset request for admin.
      */
     public function forgotPassword(Request $request)

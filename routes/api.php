@@ -67,12 +67,13 @@ Route::group(['prefix' => 'auth'], function ($router) {
     Route::post('register', [AuthController::class, 'register'])->middleware('throttle:5,1');
 
     // Authenticated user routes
-    Route::group(['middleware' => 'auth:api'], function () {
+    Route::group(['middleware' => ['auth:api', 'force_password_change']], function () {
         Route::post('logout', [AuthController::class, 'logout']);
         Route::post('refresh', [AuthController::class, 'refresh']);
         Route::get('me', [AuthController::class, 'me']);
         Route::put('profile', [AuthController::class, 'updateProfile']);
         Route::post('profile', [AuthController::class, 'updateProfile']); // POST for file uploads
+        Route::post('force-change-password', [AuthController::class, 'forceChangePassword']);
 
         // Cart Routes
         Route::get('cart', [\App\Http\Controllers\CartController::class, 'index']);
