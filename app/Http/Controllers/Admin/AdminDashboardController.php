@@ -36,11 +36,12 @@ class AdminDashboardController extends Controller
         // New orders today
         $newOrders = Order::whereDate('created_at', $today)->count();
 
-        // Low stock count (Corrected logic: Sum all movements)
-        $lowStock = Product::get()->filter(function($p) {
-            $totalStock = \App\Models\ProductMovement::where('product_id', $p->id)->sum('instock_quantity');
-            return $totalStock <= $p->minimum_quantity;
-        })->count();
+        // Low stock count (Optimized: single query with aggregation)
+        $lowStock = Product::withSum('movements as total_stock', 'instock_quantity')
+            ->get()
+            ->filter(function($p) {
+                return $p->total_stock <= $p->minimum_quantity;
+            })->count();
 
         // Expiring soon (30 days)
         $expiringSoon = ProductMovement::where('instock_quantity', '>', 0)
@@ -58,6 +59,13 @@ class AdminDashboardController extends Controller
             ->take(5)
             ->get();
 
+        // Health Tips stats
+        $healthTipsCount = \App\Models\HealthTip::count();
+        $publishedTips = \App\Models\HealthTip::where('is_published', true)->count();
+
+        // Product stats
+        $totalProducts = Product::count();
+
         return response()->json([
             'today_sales' => $todaySales,
             'yesterday_sales' => $yesterdaySales,
@@ -67,6 +75,9 @@ class AdminDashboardController extends Controller
             'expiring_soon' => $expiringSoon,
             'pending_password_resets' => $pendingResets,
             'recent_orders' => $recentOrders,
+            'total_products' => $totalProducts,
+            'health_tips_count' => $healthTipsCount,
+            'published_tips' => $publishedTips,
         ]);
     }
 

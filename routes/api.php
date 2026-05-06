@@ -53,6 +53,9 @@ Route::post('/contact', [ContactUsController::class, 'store'])->middleware('thro
 // Site Settings (public read for frontend branding)
 Route::get('/site-settings', [AdminDashboardController::class, 'getSettings']);
 
+// Global Search (public)
+Route::get('/search', [SearchController::class, 'search']);
+
 // Forgot Password (public - rate limited)
 Route::post('/forgot-password', [AuthController::class, 'forgotPassword'])->middleware('throttle:5,1');
 
@@ -94,9 +97,6 @@ Route::group(['prefix' => 'auth'], function ($router) {
 
         // Health Tip Feedback (authenticated)
         Route::post('health-tips/{id}/feedback', [FeedbackController::class, 'store']);
-
-        // Search (authenticated)
-        Route::get('search', [SearchController::class, 'search']);
     });
 });
 
@@ -118,7 +118,7 @@ Route::group([
     // --- Site Settings (admin only) ---
     Route::get('site-settings', [AdminDashboardController::class, 'getSettings'])
         ->middleware('permission:site_settings.manage');
-    Route::put('site-settings', [AdminDashboardController::class, 'updateSettings'])
+    Route::post('site-settings', [AdminDashboardController::class, 'updateSettings'])
         ->middleware('permission:site_settings.manage');
 
     // --- Activity Logs (admin only) ---

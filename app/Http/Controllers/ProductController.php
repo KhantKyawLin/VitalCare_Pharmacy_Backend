@@ -10,7 +10,7 @@ class ProductController extends Controller
 {
     public function index(Request $request)
     {
-        $query = Product::with(['category', 'pictures', 'unit', 'promotions'])
+        $query = Product::with(['category', 'pictures', 'unit', 'promotions', 'latestMovement'])
             ->where('is_published', true);
         
         if ($request->filled('category_id')) {
@@ -37,7 +37,7 @@ class ProductController extends Controller
 
     public function topSellers()
     {
-        $products = Product::with(['category', 'pictures', 'unit', 'promotions'])
+        $products = Product::with(['category', 'pictures', 'unit', 'promotions', 'latestMovement'])
             ->where('is_published', true)
             ->latest()
             ->take(10)
@@ -49,7 +49,7 @@ class ProductController extends Controller
 
     public function specialOffers()
     {
-        $products = Product::with(['category', 'pictures', 'unit', 'promotions'])
+        $products = Product::with(['category', 'pictures', 'unit', 'promotions', 'latestMovement'])
             ->where('is_published', true)
             ->whereHas('promotions')
             ->take(10)
@@ -61,7 +61,7 @@ class ProductController extends Controller
 
     public function show($id)
     {
-        $product = Product::with(['category', 'pictures', 'unit', 'promotions'])
+        $product = Product::with(['category', 'pictures', 'unit', 'promotions', 'latestMovement'])
             ->where('is_published', true)
             ->find($id);
         if (!$product) {
@@ -71,7 +71,7 @@ class ProductController extends Controller
         $this->applyMarkup($product);
 
         // Fetch related products
-        $related = Product::with(['category', 'pictures', 'unit', 'promotions'])
+        $related = Product::with(['category', 'pictures', 'unit', 'promotions', 'latestMovement'])
             ->where('category_id', $product->category_id)
             ->where('id', '!=', $id)
             ->take(5)

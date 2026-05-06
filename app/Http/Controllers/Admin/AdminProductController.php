@@ -40,15 +40,16 @@ class AdminProductController extends Controller
 
         // Compute global metrics
         $totalProducts = Product::count();
-        $lowStockQuery = Product::with('movements')->get()->filter(function ($p) {
-            $totalStock = $p->movements->sum('instock_quantity');
-            return $totalStock <= $p->minimum_quantity;
-        })->count();
+        $lowStockQuery = Product::withSum('movements as total_stock', 'instock_quantity')
+            ->get()
+            ->filter(function($p) {
+                return ($p->total_stock ?? 0) <= $p->minimum_quantity;
+            })->count();
         $expiringSoon = \App\Models\ProductMovement::where('instock_quantity', '>', 0)
             ->whereIn('movement_type', ['current', 'stored'])
             ->whereBetween('expired_date', [now(), now()->addDays(30)])
             ->count();
-        $activeSuppliers = \App\Models\SupplyProduct::distinct('supplier_id')->count('supplier_id');
+        $activeSuppliers = \App\Models\Supplier::count();
 
         return response()->json([
             'data' => $products->items(),
