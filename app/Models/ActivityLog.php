@@ -31,6 +31,7 @@ class ActivityLog extends Model
             'old_values' => $oldValues,
             'new_values' => $newValues,
             'ip_address' => request()->ip(),
+            'created_at' => now(),
         ]);
     }
 }

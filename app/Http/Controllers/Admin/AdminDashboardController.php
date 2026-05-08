@@ -66,6 +66,12 @@ class AdminDashboardController extends Controller
         // Product stats
         $totalProducts = Product::count();
 
+        // Recent activity logs (Audit List)
+        $recentActivity = ActivityLog::with('user')
+            ->latest('created_at')
+            ->take(5)
+            ->get();
+            
         return response()->json([
             'today_sales' => $todaySales,
             'yesterday_sales' => $yesterdaySales,
@@ -75,6 +81,7 @@ class AdminDashboardController extends Controller
             'expiring_soon' => $expiringSoon,
             'pending_password_resets' => $pendingResets,
             'recent_orders' => $recentOrders,
+            'recent_activity' => $recentActivity,
             'total_products' => $totalProducts,
             'health_tips_count' => $healthTipsCount,
             'published_tips' => $publishedTips,
