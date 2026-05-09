@@ -27,6 +27,7 @@ use App\Http\Controllers\Admin\AdminRoleController;
 use App\Http\Controllers\Admin\AdminExpiredItemController;
 use App\Http\Controllers\Admin\AdminExternalTransactionController;
 use App\Http\Controllers\Admin\AdminActivityLogController;
+use App\Http\Controllers\Admin\AdminNotificationController;
 
 /*
 |--------------------------------------------------------------------------
@@ -119,6 +120,8 @@ Route::group([
     // --- Dashboard (admin only) ---
     Route::get('dashboard', [AdminDashboardController::class, 'index'])
         ->middleware('permission:dashboard.view');
+
+    Route::get('notifications/alerts', [AdminNotificationController::class, 'getAlerts']);
 
     // --- Site Settings (admin only) ---
     Route::get('site-settings', [AdminDashboardController::class, 'getSettings'])
