@@ -8,6 +8,8 @@ use App\Http\Controllers\HealthTipController;
 use App\Http\Controllers\FeedbackController;
 use App\Http\Controllers\ContactUsController;
 use App\Http\Controllers\SearchController;
+use App\Http\Controllers\FaqController;
+use App\Http\Controllers\Admin\AdminFaqController;
 
 // --- Import Admin Controllers ---
 use App\Http\Controllers\Admin\AdminProductController;
@@ -55,6 +57,9 @@ Route::get('/site-settings', [AdminDashboardController::class, 'getSettings']);
 
 // Global Search (public)
 Route::get('/search', [SearchController::class, 'search']);
+
+// FAQs (public)
+Route::get('/faqs', [FaqController::class, 'index']);
 
 // Forgot Password (public - rate limited)
 Route::post('/forgot-password', [AuthController::class, 'forgotPassword'])->middleware('throttle:5,1');
@@ -265,4 +270,13 @@ Route::group([
         ->middleware('role:admin');
     Route::put('contact-messages/{id}', [ContactUsController::class, 'update'])
         ->middleware('role:admin');
+
+    // --- FAQ Management (admin + pharmacist) ---
+    Route::group(['middleware' => 'permission:health_tips.crud'], function () {
+        Route::get('faqs', [AdminFaqController::class, 'index']);
+        Route::post('faqs', [AdminFaqController::class, 'store']);
+        Route::put('faqs/{id}', [AdminFaqController::class, 'update']);
+        Route::delete('faqs/{id}', [AdminFaqController::class, 'destroy']);
+        Route::post('faqs/reorder', [AdminFaqController::class, 'reorder']);
+    });
 });
