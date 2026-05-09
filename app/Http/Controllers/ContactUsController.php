@@ -17,6 +17,7 @@ class ContactUsController extends Controller
             'name' => 'required|string|max:100',
             'email' => 'required|email|max:100',
             'subject' => 'required|string|max:500',
+            'order_id' => 'required_if:subject,Order Inquiry|nullable|string|max:100',
             'message' => 'required|string',
         ]);
         if ($validator->fails()) return response()->json($validator->errors(), 422);
@@ -26,6 +27,7 @@ class ContactUsController extends Controller
             'name' => $request->name,
             'email' => $request->email,
             'subject' => $request->subject,
+            'order_id' => $request->order_id,
             'message' => $request->message,
         ]);
 

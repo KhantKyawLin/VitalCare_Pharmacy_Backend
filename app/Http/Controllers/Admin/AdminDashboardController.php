@@ -72,6 +72,31 @@ class AdminDashboardController extends Controller
             ->take(5)
             ->get();
             
+        // Sales trend (last 7 days)
+        $salesTrend = [];
+        for ($i = 6; $i >= 0; $i--) {
+            $date = now()->subDays($i)->toDateString();
+            $amount = Order::whereDate('created_at', $date)
+                ->where('status', 'completed')
+                ->sum('total_amount');
+            $salesTrend[] = [
+                'day' => now()->subDays($i)->format('D'),
+                'amount' => (float)$amount
+            ];
+        }
+
+        // Category distribution
+        $categoryDistribution = \App\Models\Category::withCount(['products as sales_count' => function($query) {
+            $query->whereHas('orderItems.order', function($q) {
+                $q->where('status', 'completed');
+            });
+        }])->get()->map(function($cat) {
+            return [
+                'name' => $cat->name,
+                'value' => $cat->sales_count
+            ];
+        });
+
         return response()->json([
             'today_sales' => $todaySales,
             'yesterday_sales' => $yesterdaySales,
@@ -85,6 +110,8 @@ class AdminDashboardController extends Controller
             'total_products' => $totalProducts,
             'health_tips_count' => $healthTipsCount,
             'published_tips' => $publishedTips,
+            'sales_trend' => $salesTrend,
+            'category_distribution' => $categoryDistribution,
         ]);
     }
 
@@ -102,7 +129,17 @@ class AdminDashboardController extends Controller
      */
     public function updateSettings(Request $request)
     {
-        $allowedKeys = ['site_name', 'site_logo', 'primary_color', 'accent_color'];
+        $allowedKeys = [
+            'site_name', 
+            'primary_color', 
+            'accent_color',
+            'about_title',
+            'about_description',
+            'about_mission_title',
+            'about_mission_desc',
+            'about_vision_title',
+            'about_vision_desc'
+        ];
 
         foreach ($allowedKeys as $key) {
             if ($request->has($key)) {
@@ -114,6 +151,18 @@ class AdminDashboardController extends Controller
         if ($request->hasFile('logo')) {
             $path = $request->file('logo')->store('branding', 'public');
             SiteSetting::set('site_logo', $path);
+        }
+
+        // Handle About Us Hero Image
+        if ($request->hasFile('about_hero_image')) {
+            $path = $request->file('about_hero_image')->store('about', 'public');
+            SiteSetting::set('about_hero_image', $path);
+        }
+
+        // Handle About Us Story Image
+        if ($request->hasFile('about_story_image')) {
+            $path = $request->file('about_story_image')->store('about', 'public');
+            SiteSetting::set('about_story_image', $path);
         }
 
         ActivityLog::log('updated', 'SiteSetting', null, 'Site settings updated');
