@@ -244,6 +244,14 @@ class OrderController extends Controller
 
             DB::commit();
 
+            // Send Order Confirmation Email
+            try {
+                \Illuminate\Support\Facades\Mail::to($user->email)
+                    ->send(new \App\Mail\OrderConfirmed($order));
+            } catch (\Exception $e) {
+                \Illuminate\Support\Facades\Log::error("Failed to send order confirmation email: " . $e->getMessage());
+            }
+
             return response()->json(['message' => 'Order placed successfully', 'order' => $order->load('orderProducts.product')]);
         } catch (\Exception $e) {
             DB::rollBack();

@@ -31,6 +31,15 @@ class ContactUsController extends Controller
             'message' => $request->message,
         ]);
 
+        // Send Email Alert to Admin
+        try {
+            $adminEmail = env('ADMIN_EMAIL', 'support@vitalcare.com');
+            \Illuminate\Support\Facades\Mail::to($adminEmail)
+                ->send(new \App\Mail\NewContactMessage($contact));
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::error("Failed to send contact email: " . $e->getMessage());
+        }
+
         return response()->json(['message' => 'Message sent successfully'], 201);
     }
 
