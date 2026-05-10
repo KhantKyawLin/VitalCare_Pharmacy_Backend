@@ -87,7 +87,7 @@ class AdminDashboardController extends Controller
 
         // Category distribution
         $categoryDistribution = \App\Models\Category::withCount(['products as sales_count' => function($query) {
-            $query->whereHas('orderItems.order', function($q) {
+            $query->whereHas('orderProducts.order', function($q) {
                 $q->where('status', 'completed');
             });
         }])->get()->map(function($cat) {

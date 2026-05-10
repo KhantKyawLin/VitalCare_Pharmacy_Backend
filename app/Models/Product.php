@@ -32,6 +32,7 @@ class Product extends Model
     public function movements() { return $this->hasMany(ProductMovement::class); }
     public function promotions() { return $this->belongsToMany(Promotion::class, 'promotion_products'); }
     public function suppliers() { return $this->belongsToMany(Supplier::class, 'supply_products'); }
+    public function orderProducts() { return $this->hasMany(OrderProduct::class); }
     public function latestMovement()
     {
         return $this->hasOne(ProductMovement::class)
