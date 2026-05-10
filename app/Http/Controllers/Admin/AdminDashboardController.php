@@ -72,6 +72,32 @@ class AdminDashboardController extends Controller
             ->take(5)
             ->get();
             
+        // --- NEW: Profit Stats ---
+        $calculateProfit = function($date) {
+            return \App\Models\OrderProduct::whereHas('order', function($q) use ($date) {
+                $q->whereDate('created_at', $date)->where('status', 'completed');
+            })->get()->sum(function($item) {
+                return ($item->price - $item->purchase_price) * $item->quantity;
+            });
+        };
+
+        $todayProfit = $calculateProfit($today);
+        $yesterdayProfit = $calculateProfit($yesterday);
+        $profitChange = $yesterdayProfit > 0
+            ? round(($todayProfit - $yesterdayProfit) / $yesterdayProfit * 100, 2)
+            : ($todayProfit > 0 ? 100 : 0);
+
+        // --- NEW: Top Selling Products (by quantity) ---
+        $topProducts = \App\Models\OrderProduct::select('product_id', \DB::raw('SUM(quantity) as total_qty'), \DB::raw('SUM(price * quantity) as total_revenue'))
+            ->whereHas('order', function($q) {
+                $q->where('status', 'completed');
+            })
+            ->with('product')
+            ->groupBy('product_id')
+            ->orderByDesc('total_qty')
+            ->take(5)
+            ->get();
+
         // Sales trend (last 7 days)
         $salesTrend = [];
         for ($i = 6; $i >= 0; $i--) {
@@ -81,6 +107,20 @@ class AdminDashboardController extends Controller
                 ->sum('total_amount');
             $salesTrend[] = [
                 'day' => now()->subDays($i)->format('D'),
+                'amount' => (float)$amount
+            ];
+        }
+
+        // --- NEW: Monthly Trend (last 6 months) ---
+        $monthlyTrend = [];
+        for ($i = 5; $i >= 0; $i--) {
+            $month = now()->subMonths($i);
+            $amount = Order::whereYear('created_at', $month->year)
+                ->whereMonth('created_at', $month->month)
+                ->where('status', 'completed')
+                ->sum('total_amount');
+            $monthlyTrend[] = [
+                'month' => $month->format('M'),
                 'amount' => (float)$amount
             ];
         }
@@ -101,9 +141,11 @@ class AdminDashboardController extends Controller
             'today_sales' => $todaySales,
             'yesterday_sales' => $yesterdaySales,
             'sales_change' => $salesChange,
+            'today_profit' => $todayProfit,
+            'profit_change' => $profitChange,
             'new_orders' => $newOrders,
             'low_stock' => $lowStock,
-            'expiring_soon' => $expiringSoon,
+            'expiring_soon' => $expiring_soon,
             'pending_password_resets' => $pendingResets,
             'recent_orders' => $recentOrders,
             'recent_activity' => $recentActivity,
@@ -111,6 +153,8 @@ class AdminDashboardController extends Controller
             'health_tips_count' => $healthTipsCount,
             'published_tips' => $publishedTips,
             'sales_trend' => $salesTrend,
+            'monthly_trend' => $monthlyTrend,
+            'top_products' => $topProducts,
             'category_distribution' => $categoryDistribution,
         ]);
     }
