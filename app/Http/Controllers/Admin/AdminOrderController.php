@@ -70,6 +70,19 @@ class AdminOrderController extends Controller
 
             $order->update($updateData);
             
+            // Send Order Shipped Email
+            if ($request->deliver_status === 'shipped' && $old['deliver_status'] !== 'shipped') {
+                try {
+                    $order->load('user'); // Ensure user is loaded
+                    if ($order->user && $order->user->email) {
+                        \Illuminate\Support\Facades\Mail::to($order->user->email)
+                            ->send(new \App\Mail\OrderShipped($order));
+                    }
+                } catch (\Exception $e) {
+                    \Illuminate\Support\Facades\Log::error("Failed to send shipping email: " . $e->getMessage());
+                }
+            }
+
             ActivityLog::log('updated', 'Order', $id, "Order #$id status updated", $old, $order->toArray());
 
             \DB::commit();

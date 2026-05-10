@@ -237,6 +237,21 @@ class OrderController extends Controller
                     'movement_date' => now(),
                     'created_by' => $user->id,
                 ]);
+
+                // Low Stock Email Alert
+                $product = $products->get($itemData['product_id']);
+                if ($product && $product->minimum_quantity > 0) {
+                    $newStock = ProductMovement::where('product_id', $product->id)->sum('instock_quantity');
+                    if ($newStock <= $product->minimum_quantity) {
+                        try {
+                            $adminEmail = env('ADMIN_EMAIL', 'support@vitalcare.com');
+                            \Illuminate\Support\Facades\Mail::to($adminEmail)
+                                ->send(new \App\Mail\LowStockAlert($product, $newStock));
+                        } catch (\Exception $e) {
+                            \Illuminate\Support\Facades\Log::error("Failed to send low stock email: " . $e->getMessage());
+                        }
+                    }
+                }
             }
 
             // Clear cart
