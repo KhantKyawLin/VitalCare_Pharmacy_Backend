@@ -145,7 +145,7 @@ class AdminDashboardController extends Controller
             'profit_change' => $profitChange,
             'new_orders' => $newOrders,
             'low_stock' => $lowStock,
-            'expiring_soon' => $expiring_soon,
+            'expiring_soon' => $expiringSoon,
             'pending_password_resets' => $pendingResets,
             'recent_orders' => $recentOrders,
             'recent_activity' => $recentActivity,
