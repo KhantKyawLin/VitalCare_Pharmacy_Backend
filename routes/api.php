@@ -99,7 +99,8 @@ Route::group(['prefix' => 'auth'], function ($router) {
         // Order Routes (own orders)
         Route::get('orders', [\App\Http\Controllers\OrderController::class, 'index']);
         Route::get('orders/{id}', [\App\Http\Controllers\OrderController::class, 'show']);
-        Route::post('checkout', [\App\Http\Controllers\OrderController::class, 'checkout']);
+        Route::get('orders/{id}/pdf', [\App\Http\Controllers\Admin\AdminInvoiceController.php ? 'App\Http\Controllers\Admin\AdminInvoiceController' : 'App\Http\Controllers\Admin\AdminInvoiceController', 'generatePDF']);
+        Route::post('checkout', [\App\Http\Controllers\OrderController::class, 'checkout'])->middleware('throttle:3,1');
 
         // Health Tip Feedback (authenticated)
         Route::post('health-tips/{id}/feedback', [FeedbackController::class, 'store']);

@@ -11,7 +11,8 @@ class ProductController extends Controller
     public function index(Request $request)
     {
         $query = Product::with(['category', 'pictures', 'unit', 'promotions', 'latestMovement'])
-            ->where('is_published', true);
+            ->where('is_published', true)
+            ->notExpired();
         
         if ($request->filled('category_id')) {
             $query->where('category_id', $request->category_id);
@@ -39,6 +40,7 @@ class ProductController extends Controller
     {
         $products = Product::with(['category', 'pictures', 'unit', 'promotions', 'latestMovement'])
             ->where('is_published', true)
+            ->notExpired()
             ->latest()
             ->take(10)
             ->get();
@@ -51,6 +53,7 @@ class ProductController extends Controller
     {
         $products = Product::with(['category', 'pictures', 'unit', 'promotions', 'latestMovement'])
             ->where('is_published', true)
+            ->notExpired()
             ->whereHas('promotions')
             ->take(10)
             ->get();
@@ -63,6 +66,7 @@ class ProductController extends Controller
     {
         $product = Product::with(['category', 'pictures', 'unit', 'promotions', 'latestMovement'])
             ->where('is_published', true)
+            ->notExpired()
             ->find($id);
         if (!$product) {
             return response()->json(['message' => 'Product not found'], 404);
@@ -74,6 +78,7 @@ class ProductController extends Controller
         $related = Product::with(['category', 'pictures', 'unit', 'promotions', 'latestMovement'])
             ->where('category_id', $product->category_id)
             ->where('id', '!=', $id)
+            ->notExpired()
             ->take(5)
             ->get();
         

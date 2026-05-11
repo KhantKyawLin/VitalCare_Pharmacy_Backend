@@ -18,18 +18,30 @@ class ActivityLog extends Model
     public function user() { return $this->belongsTo(User::class); }
 
     /**
-     * Helper to log an activity.
+     * Helper to log an activity with sensitive data filtering.
      */
     public static function log($action, $modelType = null, $modelId = null, $description = null, $oldValues = null, $newValues = null)
     {
+        $sensitiveKeys = ['password', 'token', 'secret', 'pin', 'key', 'cvv', 'remember_token'];
+        
+        $filter = function($values) use ($sensitiveKeys) {
+            if (!is_array($values)) return $values;
+            foreach ($values as $k => $v) {
+                if (in_array(strtolower($k), $sensitiveKeys)) {
+                    $values[$k] = '[SENSITIVE DATA REDACTED]';
+                }
+            }
+            return $values;
+        };
+
         return static::create([
             'user_id' => auth('api')->id(),
             'action' => $action,
             'model_type' => $modelType,
             'model_id' => $modelId,
             'description' => $description,
-            'old_values' => $oldValues,
-            'new_values' => $newValues,
+            'old_values' => $filter($oldValues),
+            'new_values' => $filter($newValues),
             'ip_address' => request()->ip(),
             'created_at' => now(),
         ]);

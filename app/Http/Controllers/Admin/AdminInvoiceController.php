@@ -16,8 +16,16 @@ class AdminInvoiceController extends Controller
      */
     public function generatePDF($id)
     {
+        $user = auth()->user();
         $order = Order::with(['user', 'orderProducts.product', 'cashier'])->findOrFail($id);
         
+        // Security Check: If not admin/staff, verify ownership
+        if (!$user->hasRole('admin') && !$user->hasRole('staff')) {
+            if ($order->user_id !== $user->id) {
+                return response()->json(['message' => 'Unauthorized access to this invoice.'], 403);
+            }
+        }
+
         $settings = SiteSetting::all()->pluck('value', 'key');
 
         // Prepare data for the view

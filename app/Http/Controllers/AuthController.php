@@ -112,6 +112,7 @@ class AuthController extends Controller
             'gender' => 'sometimes|in:male,female,others',
             'current_password' => 'required_with:password|string',
             'password' => 'sometimes|string|min:6|confirmed',
+            'profile_image' => 'sometimes|image|mimes:jpeg,png,jpg,gif|max:2048',
         ]);
         if ($validator->fails()) return response()->json($validator->errors(), 422);
 

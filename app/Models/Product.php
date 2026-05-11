@@ -42,6 +42,21 @@ class Product extends Model
     }
 
     /**
+     * Filter products that are not expired based on their latest movement.
+     */
+    public function scopeNotExpired($query)
+    {
+        return $query->where(function($q) {
+            $q->whereHas('latestMovement', function($sub) {
+                $sub->where(function($inner) {
+                    $inner->whereNull('expired_date')
+                          ->orWhere('expired_date', '>=', now()->startOfDay());
+                });
+            })->orWhereDoesntHave('latestMovement');
+        });
+    }
+
+    /**
      * Get the price of the product, applying 10% markup if price is 0.
      * Optimized to use eager-loaded relation if available.
      */

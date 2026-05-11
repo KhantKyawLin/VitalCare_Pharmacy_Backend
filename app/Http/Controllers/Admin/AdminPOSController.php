@@ -105,34 +105,40 @@ class AdminPOSController extends Controller
             return response()->json(['status' => 'error', 'errors' => $validator->errors()], 422);
         }
 
-        // --- Stock Validation ---
-        $stockErrors = [];
-        foreach ($request->items as $item) {
-            $product = Product::with('movements')->find($item['product_id']);
-            if (!$product) {
-                $stockErrors[] = "Product ID {$item['product_id']} not found.";
-                continue;
-            }
-
-            $currentStock = $product->movements->reduce(function ($sum, $m) {
-                return $sum + (int)$m->instock_quantity;
-            }, 0);
-
-            if ($currentStock < $item['quantity']) {
-                $stockErrors[] = "{$product->name} — only {$currentStock} in stock, but {$item['quantity']} requested.";
-            }
-        }
-
-        if (!empty($stockErrors)) {
-            return response()->json([
-                'status' => 'error',
-                'message' => 'Insufficient stock for the following items:',
-                'stock_errors' => $stockErrors
-            ], 422);
-        }
-
         DB::beginTransaction();
         try {
+            $stockErrors = [];
+            
+            // --- Race Condition Prevention: Pessimistic Locking ---
+            // 1. Get unique product IDs and sort them to prevent deadlocks
+            $productIds = collect($request->items)->pluck('product_id')->unique()->sort()->values();
+            
+            // 2. Lock products for update
+            $products = Product::whereIn('id', $productIds)->lockForUpdate()->get()->keyBy('id');
+
+            // 3. Re-verify stock inside the transaction lock
+            foreach ($request->items as $item) {
+                $product = $products->get($item['product_id']);
+                if (!$product) {
+                    $stockErrors[] = "Product ID {$item['product_id']} not found.";
+                    continue;
+                }
+
+                $currentStock = ProductMovement::where('product_id', $product->id)->sum('instock_quantity');
+
+                if ($currentStock < $item['quantity']) {
+                    $stockErrors[] = "{$product->name} — only {$currentStock} in stock, but {$item['quantity']} requested.";
+                }
+            }
+
+            if (!empty($stockErrors)) {
+                DB::rollBack();
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Insufficient stock for the following items:',
+                    'stock_errors' => $stockErrors
+                ], 422);
+            }
             // Generate a unique receipt number
             $receiptNumber = 'VCP-' . strtoupper(Str::random(8)) . '-' . time();
 

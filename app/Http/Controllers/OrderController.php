@@ -57,6 +57,7 @@ class OrderController extends Controller
             'delivery_address' => 'required|string',
             'contact_phone' => 'required|string',
             'payment_method' => 'required|string|in:Cash,Online',
+            'payment_proof' => 'required_if:payment_method,Online|image|mimes:jpeg,png,jpg|max:5120',
         ]);
 
         $cart = Cart::with('items.product')->where('user_id', $user->id)->first();
