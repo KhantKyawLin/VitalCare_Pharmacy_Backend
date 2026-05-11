@@ -187,6 +187,7 @@ Route::group([
     Route::group(['middleware' => 'permission:orders.manage'], function () {
         Route::get('orders', [AdminOrderController::class, 'index']);
         Route::get('orders/{id}', [AdminOrderController::class, 'show']);
+        Route::get('orders/{id}/pdf', [\App\Http\Controllers\Admin\AdminInvoiceController::class, 'generatePDF']);
         Route::put('orders/{id}', [AdminOrderController::class, 'update']);
         Route::delete('orders/{id}', [AdminOrderController::class, 'destroy'])
             ->middleware('role:admin'); // Only admin can delete orders
