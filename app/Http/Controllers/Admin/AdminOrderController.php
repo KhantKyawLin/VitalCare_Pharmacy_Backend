@@ -86,6 +86,10 @@ class AdminOrderController extends Controller
             ActivityLog::log('updated', 'Order', $id, "Order #$id status updated", $old, $order->toArray());
 
             \DB::commit();
+
+            // Real-time WebSocket Alert for Order Status Update
+            event(new \App\Events\OrderStatusUpdated($order));
+
             return response()->json(['message' => 'Order updated successfully', 'order' => $order]);
         } catch (\Exception $e) {
             \DB::rollBack();

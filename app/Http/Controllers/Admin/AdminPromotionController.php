@@ -91,6 +91,10 @@ class AdminPromotionController extends Controller
             }
 
             DB::commit();
+
+            // Real-time WebSocket Alert for New Promotion
+            event(new \App\Events\PromotionAlert($promotion));
+
             return response()->json([
                 'status' => 'success',
                 'message' => 'Promotion created successfully',

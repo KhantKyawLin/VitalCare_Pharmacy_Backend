@@ -105,6 +105,9 @@ class AdminInventoryController extends Controller
 
             DB::commit();
 
+            // Real-time WebSocket Alert for New Purchase
+            event(new \App\Events\NewPurchaseAlert($purchase->load('supplier', 'purchaseProducts.productMovement.product')));
+
             ActivityLog::log('created', 'Purchase', $purchase->id, "Purchase #{$purchase->id} created with " . count($request->items) . " items");
 
             return response()->json([

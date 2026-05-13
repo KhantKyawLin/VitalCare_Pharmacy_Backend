@@ -248,6 +248,9 @@ class OrderController extends Controller
                             $adminEmail = env('ADMIN_EMAIL', 'support@vitalcare.com');
                             \Illuminate\Support\Facades\Mail::to($adminEmail)
                                 ->send(new \App\Mail\LowStockAlert($product, $newStock));
+                            
+                            // Real-time WebSocket Alert
+                            event(new \App\Events\LowStockAlert($product));
                         } catch (\Exception $e) {
                             \Illuminate\Support\Facades\Log::error("Failed to send low stock email: " . $e->getMessage());
                         }
@@ -259,6 +262,9 @@ class OrderController extends Controller
             $cart->items()->delete();
 
             DB::commit();
+
+            // Real-time WebSocket Alert for New Online Order
+            event(new \App\Events\NewOrderAlert($order->load('orderProducts.product', 'user')));
 
             // Send Order Confirmation Email
             try {
