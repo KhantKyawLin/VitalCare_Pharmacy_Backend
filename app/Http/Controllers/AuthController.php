@@ -128,7 +128,53 @@ class AuthController extends Controller
 
         // Handle profile image upload
         if ($request->hasFile('profile_image')) {
-            $data['profile'] = $request->file('profile_image')->store('profiles', 'public');
+            $file = $request->file('profile_image');
+            $imagePath = $file->path();
+            $mime = $file->getMimeType();
+            $image = null;
+            
+            if ($mime == 'image/jpeg' || $mime == 'image/jpg') {
+                $image = @imagecreatefromjpeg($imagePath);
+            } elseif ($mime == 'image/png') {
+                $image = @imagecreatefrompng($imagePath);
+            }
+            
+            if ($image) {
+                // Resize if too large
+                $width = imagesx($image);
+                $height = imagesy($image);
+                if ($width > 800 || $height > 800) {
+                    $ratio = min(800 / $width, 800 / $height);
+                    $newWidth = $width * $ratio;
+                    $newHeight = $height * $ratio;
+                    $resized = imagecreatetruecolor($newWidth, $newHeight);
+                    
+                    // Handle transparency for PNGs
+                    if ($mime == 'image/png') {
+                        imagealphablending($resized, false);
+                        imagesavealpha($resized, true);
+                        $transparent = imagecolorallocatealpha($resized, 255, 255, 255, 127);
+                        imagefilledrectangle($resized, 0, 0, $newWidth, $newHeight, $transparent);
+                    }
+                    
+                    imagecopyresampled($resized, $image, 0, 0, 0, 0, $newWidth, $newHeight, $width, $height);
+                    imagedestroy($image);
+                    $image = $resized;
+                }
+
+                $filename = 'profiles/' . uniqid() . '_' . time() . '.jpg';
+                $fullPath = storage_path('app/public/' . $filename);
+                
+                if (!file_exists(dirname($fullPath))) {
+                    mkdir(dirname($fullPath), 0755, true);
+                }
+                
+                imagejpeg($image, $fullPath, 75); // 75% quality
+                imagedestroy($image);
+                $data['profile'] = $filename;
+            } else {
+                $data['profile'] = $file->store('profiles', 'public');
+            }
         }
 
         $user->update($data);

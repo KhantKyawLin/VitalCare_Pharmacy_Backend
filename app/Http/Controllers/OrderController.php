@@ -66,10 +66,34 @@ class OrderController extends Controller
             return response()->json(['message' => 'Cart is empty'], 400);
         }
 
-        // Handle upload if Online Payment
         $slipImagePath = null;
         if ($request->payment_method === 'Online' && $request->hasFile('payment_proof')) {
-            $slipImagePath = $request->file('payment_proof')->store('payment_slips', 'public');
+            $file = $request->file('payment_proof');
+            $imagePath = $file->path();
+            $mime = $file->getMimeType();
+            $image = null;
+            
+            if ($mime == 'image/jpeg' || $mime == 'image/jpg') {
+                $image = @imagecreatefromjpeg($imagePath);
+            } elseif ($mime == 'image/png') {
+                $image = @imagecreatefrompng($imagePath);
+            }
+            
+            if ($image) {
+                $filename = 'payment_slips/' . uniqid() . '_' . time() . '.jpg';
+                $fullPath = storage_path('app/public/' . $filename);
+                
+                if (!file_exists(dirname($fullPath))) {
+                    mkdir(dirname($fullPath), 0755, true);
+                }
+                
+                // Compress to 70% quality
+                imagejpeg($image, $fullPath, 70);
+                imagedestroy($image);
+                $slipImagePath = $filename;
+            } else {
+                $slipImagePath = $file->store('payment_slips', 'public');
+            }
         }
 
         DB::beginTransaction();
