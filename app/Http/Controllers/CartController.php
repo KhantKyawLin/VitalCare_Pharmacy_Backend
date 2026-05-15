@@ -32,6 +32,12 @@ class CartController extends Controller
             'quantity' => 'required|integer|min:1',
         ]);
 
+        // Security check: Don't allow adding expired products to cart
+        $product = \App\Models\Product::notExpired()->find($request->product_id);
+        if (!$product) {
+            return response()->json(['message' => 'This product is currently unavailable or expired.'], 422);
+        }
+
         $cart = Cart::firstOrCreate(['user_id' => $user->id]);
 
         $cartItem = CartItem::where('cart_id', $cart->id)

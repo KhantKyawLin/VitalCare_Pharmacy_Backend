@@ -22,6 +22,7 @@ class SearchController extends Controller
         // Search Products (Name, Description, Category)
         $products = Product::with(['category', 'pictures', 'unit'])
             ->where('is_published', true)
+            ->notExpired()
             ->where(function($q) use ($query) {
                 $q->where('name', 'like', "%$query%")
                   ->orWhere('description', 'like', "%$query%")

@@ -33,6 +33,12 @@ class WishlistController extends Controller
             'product_id' => 'required|exists:products,id',
         ]);
 
+        // Don't allow adding expired products to wishlist
+        $product = Product::notExpired()->find($request->product_id);
+        if (!$product) {
+            return response()->json(['message' => 'This product is currently unavailable or expired.'], 422);
+        }
+
         $exists = Wishlist::where('user_id', $user->id)
             ->where('product_id', $request->product_id)
             ->exists();
