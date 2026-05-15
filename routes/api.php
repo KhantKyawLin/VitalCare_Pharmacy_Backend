@@ -189,6 +189,7 @@ Route::group([
         Route::get('orders', [AdminOrderController::class, 'index']);
         Route::get('orders/{id}', [AdminOrderController::class, 'show']);
         Route::get('orders/{id}/pdf', [\App\Http\Controllers\Admin\AdminInvoiceController::class, 'generatePDF']);
+        Route::patch('orders/{id}/prescription', [AdminOrderController::class, 'updatePrescriptionStatus']);
         Route::put('orders/{id}', [AdminOrderController::class, 'update']);
         Route::delete('orders/{id}', [AdminOrderController::class, 'destroy'])
             ->middleware('role:admin'); // Only admin can delete orders

@@ -7,7 +7,7 @@ class ProductMovement extends Model
     public $timestamps = false;
     protected $fillable = [
         'product_id', 'supply_product_id', 'instock_quantity',
-        'manufactured_date', 'expired_date', 'movement_type',
+        'manufactured_date', 'expired_date', 'movement_type', 'batch_number',
         'purchase_price', 'sale_price', 'movement_date', 'created_by'
     ];
 

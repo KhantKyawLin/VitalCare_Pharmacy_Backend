@@ -64,6 +64,7 @@ class AdminInventoryController extends Controller
             'items.*.sale_price' => 'required|numeric|min:0',
             'items.*.expired_date' => 'required|date|after:today',
             'items.*.manufactured_date' => 'nullable|date',
+            'items.*.batch_number' => 'required|string|max:100',
         ]);
 
         if ($validator->fails()) return response()->json($validator->errors(), 422);
@@ -87,6 +88,7 @@ class AdminInventoryController extends Controller
                     'manufactured_date' => $item['manufactured_date'] ?? null,
                     'expired_date' => $item['expired_date'],
                     'movement_type' => 'current',
+                    'batch_number' => $item['batch_number'],
                     'purchase_price' => $item['purchase_price'],
                     'sale_price' => $item['sale_price'],
                     'created_by' => auth('api')->id(),

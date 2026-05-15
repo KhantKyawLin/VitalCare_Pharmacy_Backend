@@ -105,4 +105,77 @@ class AdminOrderController extends Controller
 
         return response()->json(['message' => 'Order deleted']);
     }
+
+    public function updatePrescriptionStatus(Request $request, $id)
+    {
+        $order = Order::with('orderProducts.product')->findOrFail($id);
+        $old = $order->toArray();
+
+        $request->validate([
+            'prescription_status' => 'required|in:approved,rejected',
+        ]);
+
+        \DB::beginTransaction();
+        try {
+            $order->prescription_status = $request->prescription_status;
+            
+            if ($request->prescription_status === 'rejected') {
+                $prescriptionItems = $order->orderProducts->filter(function ($item) {
+                    return $item->product && $item->product->requires_prescription;
+                });
+
+                if ($prescriptionItems->count() === $order->orderProducts->count()) {
+                    // Full cancellation: all items were prescription-based
+                    $order->status = 'cancelled';
+                    
+                    foreach ($order->orderProducts as $item) {
+                        \App\Models\ProductMovement::create([
+                            'product_id' => $item->product_id,
+                            'movement_type' => 'returned',
+                            'instock_quantity' => $item->quantity,
+                            'movement_date' => now(),
+                            'created_by' => auth()->id(),
+                            'sale_price' => $item->price,
+                        ]);
+                    }
+                } else {
+                    // Partial cancellation: keep non-prescription items
+                    $deductedAmount = 0;
+                    
+                    foreach ($prescriptionItems as $item) {
+                        // Return inventory for rejected items
+                        \App\Models\ProductMovement::create([
+                            'product_id' => $item->product_id,
+                            'movement_type' => 'returned',
+                            'instock_quantity' => $item->quantity,
+                            'movement_date' => now(),
+                            'created_by' => auth()->id(),
+                            'sale_price' => $item->price,
+                        ]);
+                        
+                        $deductedAmount += ($item->price * $item->quantity);
+                        $item->delete(); // Remove item from order
+                    }
+                    
+                    // Adjust total amount
+                    $order->total_amount = max(0, $order->total_amount - $deductedAmount);
+                    
+                    // Note that a partial refund might be needed if they paid online
+                    if ($order->payment_method === 'Online') {
+                        $existingReason = $order->refund_reason ? $order->refund_reason . " | " : "";
+                        $order->refund_reason = $existingReason . "Prescription rejected. Partial refund of {$deductedAmount} required.";
+                    }
+                }
+            }
+
+            $order->save();
+            ActivityLog::log('updated', 'Order', $id, "Prescription status updated to {$request->prescription_status}", $old, $order->toArray());
+
+            \DB::commit();
+            return response()->json(['message' => "Prescription {$request->prescription_status} successfully.", 'order' => $order]);
+        } catch (\Exception $e) {
+            \DB::rollBack();
+            return response()->json(['message' => 'Failed to update prescription status: ' . $e->getMessage()], 500);
+        }
+    }
 }

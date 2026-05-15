@@ -66,6 +66,20 @@ class OrderController extends Controller
             return response()->json(['message' => 'Cart is empty'], 400);
         }
 
+        $requiresPrescription = $cart->items->contains(function ($item) {
+            return $item->product && $item->product->requires_prescription;
+        });
+
+        if ($requiresPrescription && !$request->hasFile('prescription_image')) {
+            return response()->json(['message' => 'A prescription image is required for one or more items in your cart.'], 400);
+        }
+
+        $prescriptionImagePath = null;
+        if ($requiresPrescription && $request->hasFile('prescription_image')) {
+            $prescriptionImagePath = $request->file('prescription_image')->store('prescriptions', 'public');
+        }
+
+
         $slipImagePath = null;
         if ($request->payment_method === 'Online' && $request->hasFile('payment_proof')) {
             $file = $request->file('payment_proof');
@@ -124,12 +138,39 @@ class OrderController extends Controller
                 $product = $products->get($item->product_id);
                 if (!$product) continue;
 
-                // 1. Check stock for main item
-                $currentStock = ProductMovement::where('product_id', $product->id)->sum('instock_quantity');
-                if ($currentStock < $item->quantity) {
-                    $stockErrors[] = "{$product->name} — only {$currentStock} in stock, but {$item->quantity} requested.";
+                // 1. Check stock and FEFO Batch Selection
+                $batches = ProductMovement::where('product_id', $product->id)
+                    ->whereIn('movement_type', ['current', 'stored'])
+                    ->where('expired_date', '>=', now())
+                    ->orderBy('expired_date', 'asc')
+                    ->get();
+                
+                $qtyNeeded = $item->quantity;
+                $fefoBatchesToConsume = [];
+                $totalAvailable = 0;
+
+                foreach($batches as $batch) {
+                    $consumed = \DB::table('order_product_batches')->where('product_movement_id', $batch->id)->sum('quantity');
+                    $available = $batch->instock_quantity - $consumed;
+                    if ($available > 0) {
+                        $totalAvailable += $available;
+                        $take = min($available, $qtyNeeded);
+                        if ($take > 0) {
+                            $fefoBatchesToConsume[] = [
+                                'product_movement_id' => $batch->id,
+                                'quantity' => $take
+                            ];
+                            $qtyNeeded -= $take;
+                        }
+                    }
+                    if ($qtyNeeded <= 0) break;
+                }
+
+                if ($qtyNeeded > 0) {
+                    $stockErrors[] = "{$product->name} — only {$totalAvailable} unexpired stock available, but {$item->quantity} requested.";
                     continue;
                 }
+
 
                 // 2. Promotion Logic (Mirror POS)
                 $standardPrice = $product->getEffectivePrice();
@@ -163,6 +204,7 @@ class OrderController extends Controller
                     'original_price' => $standardPrice,
                     'purchase_price' => $costPrice,
                     'is_gift' => false,
+                    'fefo_batches' => $fefoBatchesToConsume,
                 ];
 
                 // 4. Handle Gifts (BOGO / Gift)
@@ -180,6 +222,7 @@ class OrderController extends Controller
                                 'original_price' => $standardPrice,
                                 'purchase_price' => $costPrice,
                                 'is_gift' => true,
+                                'fefo_batches' => [], // Skipping FEFO for simple BOGO gift clone for now
                             ];
                         }
                     } elseif ($promo->type === 'buy_one_get_gift' && $promo->gift_product_id) {
@@ -198,6 +241,7 @@ class OrderController extends Controller
                                     'original_price' => $giftProduct->price,
                                     'purchase_price' => 0, // cost tracking for gifts is optional
                                     'is_gift' => true,
+                                    'fefo_batches' => [], // Gifts might not strict FEFO for simplicity or can be added later
                                 ];
                             }
                         }
@@ -247,10 +291,25 @@ class OrderController extends Controller
                 'contact_phone' => $request->contact_phone,
                 'payment_method' => $request->payment_method,
                 'slip_image' => $slipImagePath,
+                'prescription_image' => $prescriptionImagePath,
+                'prescription_status' => $requiresPrescription ? 'pending' : 'none',
             ]);
 
             foreach ($orderItemsToCreate as $itemData) {
-                OrderProduct::create(array_merge($itemData, ['order_id' => $order->id]));
+                $fefoBatches = $itemData['fefo_batches'] ?? [];
+                unset($itemData['fefo_batches']);
+
+                $op = OrderProduct::create(array_merge($itemData, ['order_id' => $order->id]));
+
+                foreach($fefoBatches as $b) {
+                    \DB::table('order_product_batches')->insert([
+                        'order_product_id' => $op->id,
+                        'product_movement_id' => $b['product_movement_id'],
+                        'quantity' => $b['quantity'],
+                        'created_at' => now(),
+                        'updated_at' => now(),
+                    ]);
+                }
 
                 // Deduct inventory
                 ProductMovement::create([
