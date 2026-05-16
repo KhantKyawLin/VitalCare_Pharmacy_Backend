@@ -232,7 +232,7 @@ class AdminInventoryController extends Controller
             'product_id' => 'required|exists:products,id',
             'adjustment' => 'required|integer',
             'reason' => 'required|in:damaged,lost,expired,counting_error,other',
-            'notes' => 'nullable|string',
+            'notes' => 'required|string|min:5',
         ]);
         if ($validator->fails()) return response()->json($validator->errors(), 422);
 

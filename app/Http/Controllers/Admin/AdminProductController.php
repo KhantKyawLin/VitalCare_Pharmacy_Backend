@@ -220,7 +220,14 @@ class AdminProductController extends Controller
             }
         }
 
-        ActivityLog::log('updated', 'Product', $product->id, "Product '{$product->name}' updated", $old, $product->toArray());
+        // Determine if price was specifically changed for enhanced logging
+        $priceChanged = $request->filled('price') && (float)$old['price'] !== (float)$request->price;
+        $action = $priceChanged ? 'price_updated' : 'updated';
+        $desc = $priceChanged 
+            ? "Product '{$product->name}' PRICE CHANGED from {$old['price']} to {$request->price}" 
+            : "Product '{$product->name}' updated";
+
+        ActivityLog::log($action, 'Product', $product->id, $desc, $old, $product->toArray());
 
         return response()->json([
             'message' => 'Product updated successfully',

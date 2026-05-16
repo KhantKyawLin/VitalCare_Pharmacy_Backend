@@ -23,6 +23,13 @@ class AuthController extends Controller
             return response()->json(['error' => 'Unauthorized'], 401);
         }
 
+        $user = auth('api')->user();
+        \App\Models\ActivityLog::log('login', 'User', $user->id, "User logged in: {$user->name} ({$user->role})");
+        
+        if ($user->role !== 'user') {
+            event(new \App\Events\StaffLoggedIn($user));
+        }
+
         return $this->respondWithToken($token);
     }
 
