@@ -19,13 +19,13 @@ class AdminExpiredItemController extends Controller
      */
     public function expired()
     {
-        $movements = ProductMovement::with(['product.category', 'product.unit'])
+        $movements = ProductMovement::with(['product.category', 'product.unit', 'purchaseProduct.purchase.supplier'])
             ->where('instock_quantity', '>', 0)
             ->whereIn('movement_type', ['current', 'stored'])
             ->where('expired_date', '<', today())
             ->get();
 
-        $disposalsThisMonth = InventoryAdjustment::where('reason', 'expired')
+        $disposalsThisMonth = InventoryAdjustment::whereIn('reason', ['expired', 'returned_to_supplier'])
             ->whereMonth('created_at', now()->month)
             ->whereYear('created_at', now()->year)
             ->sum('adjustment');
@@ -63,7 +63,7 @@ class AdminExpiredItemController extends Controller
     {
         $days = $request->query('days', 30); // Default to 30 days
         
-        $movements = ProductMovement::with(['product.category', 'product.unit'])
+        $movements = ProductMovement::with(['product.category', 'product.unit', 'purchaseProduct.purchase.supplier'])
             ->where('instock_quantity', '>', 0)
             ->whereIn('movement_type', ['current', 'stored'])
             ->whereBetween('expired_date', [today(), today()->addDays((int)$days)])
@@ -85,7 +85,8 @@ class AdminExpiredItemController extends Controller
     {
         $validator = Validator::make($request->all(), [
             'movement_ids' => 'required|array|min:1',
-            'movement_ids.*' => 'exists:product_movements,id'
+            'movement_ids.*' => 'exists:product_movements,id',
+            'reason' => 'required|in:expired,returned_to_supplier'
         ]);
 
         if ($validator->fails()) return response()->json($validator->errors(), 422);
@@ -113,9 +114,11 @@ class AdminExpiredItemController extends Controller
                         'quantity_before' => $currentStock,
                         'quantity_after' => $currentStock - $qty,
                         'adjustment' => -$qty,
-                        'reason' => 'expired',
+                        'reason' => $request->reason,
                         'financial_value' => $value,
-                        'notes' => 'Disposed from expired management module',
+                        'notes' => $request->reason === 'returned_to_supplier' 
+                            ? 'Returned to supplier via inventory management' 
+                            : 'Disposed from expired management module',
                         'adjusted_by' => auth('api')->id(),
                     ]);
 
@@ -131,7 +134,8 @@ class AdminExpiredItemController extends Controller
 
             DB::commit();
 
-            ActivityLog::log('adjusted', 'Inventory', null, "Disposed {$disposedCount} expired batches with value Tk {$totalLoss}");
+            $actionText = $request->reason === 'returned_to_supplier' ? 'Returned' : 'Disposed';
+            ActivityLog::log('adjusted', 'Inventory', null, "{$actionText} {$disposedCount} batches with value Tk {$totalLoss}");
 
             return response()->json([
                 'message' => 'Items disposed successfully.',
@@ -150,8 +154,8 @@ class AdminExpiredItemController extends Controller
      */
     public function disposals()
     {
-        $disposals = InventoryAdjustment::with(['product.category', 'product.unit', 'adjuster', 'productMovement'])
-            ->where('reason', 'expired')
+        $disposals = InventoryAdjustment::with(['product.category', 'product.unit', 'adjuster', 'productMovement.purchaseProduct.purchase.supplier'])
+            ->whereIn('reason', ['expired', 'returned_to_supplier'])
             ->orderBy('created_at', 'desc')
             ->get();
 

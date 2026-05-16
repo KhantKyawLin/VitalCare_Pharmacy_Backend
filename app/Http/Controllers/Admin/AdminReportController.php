@@ -44,12 +44,16 @@ class AdminReportController extends Controller
         $netRevenue = $revenue - $refunds;
         $grossProfit = $netRevenue - $cogs;
 
-        // 3. Adjustments (Losses)
-        $losses = InventoryAdjustment::whereBetween('created_at', [$dateRange['start'], $dateRange['end']])
+        // 3. Adjustments (Losses vs Recoverable)
+        $totalLosses = InventoryAdjustment::whereBetween('created_at', [$dateRange['start'], $dateRange['end']])
             ->whereIn('reason', ['expired', 'damaged', 'lost'])
             ->sum('financial_value');
+            
+        $recoverableValue = InventoryAdjustment::whereBetween('created_at', [$dateRange['start'], $dateRange['end']])
+            ->where('reason', 'returned_to_supplier')
+            ->sum('financial_value');
 
-        $netProfit = $grossProfit - abs($losses);
+        $netProfit = $grossProfit - abs($totalLosses); // Supplier returns aren't immediate losses if credit is expected
 
         // 3. External Transactions
         $externalExpenses = ExternalTransaction::where('type', 'expense')
@@ -85,7 +89,8 @@ class AdminReportController extends Controller
                 'total_refunds' => (float)$refunds,
                 'total_cogs' => $cogs,
                 'gross_profit' => $grossProfit,
-                'total_losses' => (float)abs($losses),
+                'total_losses' => (float)abs($totalLosses),
+                'recoverable_returns' => (float)abs($recoverableValue),
                 'external_expenses' => (float)$externalExpenses,
                 'external_income' => (float)$externalIncome,
                 'net_profit' => $netProfit,
@@ -132,7 +137,7 @@ class AdminReportController extends Controller
         $dateRange = $this->getDateRange($range, $request);
 
         $losses = InventoryAdjustment::whereBetween('created_at', [$dateRange['start'], $dateRange['end']])
-            ->whereIn('reason', ['expired', 'damaged', 'lost'])
+            ->whereIn('reason', ['expired', 'damaged', 'lost', 'returned_to_supplier', 'counting_error'])
             ->select('reason', DB::raw('SUM(ABS(financial_value)) as value'))
             ->groupBy('reason')
             ->get();
@@ -230,13 +235,14 @@ class AdminReportController extends Controller
         if ($type === 'all' || $type === 'losses') {
             $losses = InventoryAdjustment::with('product')
                 ->whereBetween('created_at', [$startDate, $endDate])
-                ->whereIn('reason', ['expired', 'damaged', 'lost'])
+                ->whereIn('reason', ['expired', 'damaged', 'lost', 'returned_to_supplier', 'counting_error'])
                 ->get()
                 ->map(function($ia) {
-                    $impact = -abs($ia->financial_value);
+                    $isReturn = $ia->reason === 'returned_to_supplier';
+                    $impact = $isReturn ? 0 : -abs($ia->financial_value); // Returns don't hit profit immediately if credit-tracked
                     return [
                         'date' => $ia->created_at->toDateTimeString(),
-                        'type' => 'Inventory Loss',
+                        'type' => $isReturn ? 'Supplier Return' : 'Inventory Loss',
                         'category' => $ia->reason,
                         'title' => ($ia->product->name ?? 'Unknown') . " Adjustment",
                         'revenue' => 0,
