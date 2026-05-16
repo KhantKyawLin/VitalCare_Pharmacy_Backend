@@ -172,6 +172,24 @@ class AdminOrderController extends Controller
             ActivityLog::log('updated', 'Order', $id, "Prescription status updated to {$request->prescription_status}", $old, $order->toArray());
 
             \DB::commit();
+
+            // Real-time WebSocket Alert for Prescription/Order Status Update
+            event(new \App\Events\OrderStatusUpdated($order->load('orderProducts.product', 'user')));
+
+            // Send Email Notification for Rejection
+            if ($request->prescription_status === 'rejected') {
+                try {
+                    if ($order->user && $order->user->email) {
+                        // Assuming you have a PrescriptionRejected mailable
+                        // If not, we can just send a general status update email
+                        \Illuminate\Support\Facades\Mail::to($order->user->email)
+                            ->send(new \App\Mail\OrderUpdated($order));
+                    }
+                } catch (\Exception $e) {
+                    \Illuminate\Support\Facades\Log::error("Failed to send prescription rejection email: " . $e->getMessage());
+                }
+            }
+
             return response()->json(['message' => "Prescription {$request->prescription_status} successfully.", 'order' => $order]);
         } catch (\Exception $e) {
             \DB::rollBack();
