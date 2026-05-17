@@ -363,4 +363,44 @@ class OrderController extends Controller
             return response()->json(['message' => 'Checkout failed: ' . $e->getMessage()], 500);
         }
     }
+    public function reorder($id)
+    {
+        $user = auth('api')->user();
+        if (!$user) return response()->json(['message' => 'Unauthorized'], 401);
+
+        $order = Order::where('user_id', $user->id)
+            ->where('id', $id)
+            ->with('orderProducts')
+            ->first();
+        
+        if (!$order) return response()->json(['message' => 'Order not found'], 404);
+        
+        $cart = Cart::firstOrCreate(['user_id' => $user->id]);
+        
+        $addedCount = 0;
+        foreach($order->orderProducts as $op) {
+            // Only reorder actual products, not gifts from previous promotions
+            if (!$op->is_gift) {
+                $cartItem = \App\Models\CartItem::where('cart_id', $cart->id)
+                    ->where('product_id', $op->product_id)
+                    ->first();
+                
+                if ($cartItem) {
+                    $cartItem->increment('quantity', $op->quantity);
+                } else {
+                    \App\Models\CartItem::create([
+                        'cart_id' => $cart->id,
+                        'product_id' => $op->product_id,
+                        'quantity' => $op->quantity
+                    ]);
+                }
+                $addedCount++;
+            }
+        }
+        
+        return response()->json([
+            'message' => "Successfully re-added {$addedCount} items to your cart.",
+            'cart_count' => \App\Models\CartItem::where('cart_id', $cart->id)->sum('quantity')
+        ]);
+    }
 }

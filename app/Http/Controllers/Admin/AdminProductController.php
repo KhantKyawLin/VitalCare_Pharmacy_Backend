@@ -82,6 +82,8 @@ class AdminProductController extends Controller
             'minimum_quantity' => 'nullable|integer|min:0',
             'is_published' => 'nullable|boolean',
             'requires_prescription' => 'nullable|boolean',
+            'is_chronic' => 'nullable|boolean',
+            'refill_interval_days' => 'nullable|integer|min:1',
 
             'images' => 'nullable|array|max:5',
             'images.*' => 'image|mimes:jpeg,png,gif|max:2048',
@@ -95,7 +97,8 @@ class AdminProductController extends Controller
         try {
             $product = Product::create($request->only([
                 'name', 'category_id', 'unit_id', 'description',
-                'usage', 'side_effects', 'dosage', 'price', 'minimum_quantity', 'is_published', 'requires_prescription'
+                'usage', 'side_effects', 'dosage', 'price', 'minimum_quantity', 'is_published', 'requires_prescription',
+                'is_chronic', 'refill_interval_days'
             ]));
 
             // Handle image uploads
@@ -176,6 +179,8 @@ class AdminProductController extends Controller
             'price' => 'nullable|numeric|min:0',
             'is_published' => 'nullable|boolean',
             'requires_prescription' => 'nullable|boolean',
+            'is_chronic' => 'nullable|boolean',
+            'refill_interval_days' => 'nullable|integer|min:1',
 
             'images' => 'nullable|array|max:5',
             'images.*' => 'image|mimes:jpeg,png,gif|max:2048',
@@ -187,7 +192,8 @@ class AdminProductController extends Controller
 
         $product->update($request->only([
             'name', 'category_id', 'unit_id', 'description',
-            'usage', 'side_effects', 'dosage', 'price', 'minimum_quantity', 'is_published', 'requires_prescription'
+            'usage', 'side_effects', 'dosage', 'price', 'minimum_quantity', 'is_published', 'requires_prescription',
+            'is_chronic', 'refill_interval_days'
         ]));
 
         // If price was updated, sync it to all active/in-stock batches
