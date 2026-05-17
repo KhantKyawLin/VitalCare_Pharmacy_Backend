@@ -85,7 +85,7 @@ class AdminPOSController extends Controller
     /**
      * Process the POS checkout transaction.
      */
-    public function checkout(Request $request)
+    public function checkout(Request $request, \App\Actions\AllocateFefoStockAction $allocateFefoStock)
     {
         $validator = Validator::make($request->all(), [
             'items' => 'required|array|min:1',
@@ -108,6 +108,7 @@ class AdminPOSController extends Controller
         DB::beginTransaction();
         try {
             $stockErrors = [];
+            $itemsToCreate = [];
             
             // --- Race Condition Prevention: Pessimistic Locking ---
             // 1. Get unique product IDs and sort them to prevent deadlocks
@@ -116,7 +117,7 @@ class AdminPOSController extends Controller
             // 2. Lock products for update
             $products = Product::whereIn('id', $productIds)->lockForUpdate()->get()->keyBy('id');
 
-            // 3. Re-verify stock inside the transaction lock
+            // 3. Re-verify stock via FEFO inside the transaction lock
             foreach ($request->items as $item) {
                 $product = $products->get($item['product_id']);
                 if (!$product) {
@@ -124,10 +125,15 @@ class AdminPOSController extends Controller
                     continue;
                 }
 
-                $currentStock = ProductMovement::where('product_id', $product->id)->sum('instock_quantity');
+                // Run FEFO stock allocation (Aligns POS with Online checkout!)
+                $allocation = $allocateFefoStock->execute($product, $item['quantity']);
 
-                if ($currentStock < $item['quantity']) {
-                    $stockErrors[] = "{$product->name} — only {$currentStock} in stock, but {$item['quantity']} requested.";
+                if ($allocation['unmet_quantity'] > 0) {
+                    $stockErrors[] = "{$product->name} — only {$allocation['available']} unexpired stock available, but {$item['quantity']} requested.";
+                } else {
+                    $itemsToCreate[] = array_merge($item, [
+                        'fefo_batches' => $allocation['batches']
+                    ]);
                 }
             }
 
@@ -139,6 +145,7 @@ class AdminPOSController extends Controller
                     'stock_errors' => $stockErrors
                 ], 422);
             }
+
             // Generate a unique receipt number
             $receiptNumber = 'VCP-' . strtoupper(Str::random(8)) . '-' . time();
 
@@ -158,8 +165,9 @@ class AdminPOSController extends Controller
                 'cashier_id' => auth()->id(),
             ]);
 
-            foreach ($request->items as $item) {
-                $product = Product::find($item['product_id']);
+            foreach ($itemsToCreate as $item) {
+                $product = $products->get($item['product_id']);
+                $fefoBatches = $item['fefo_batches'] ?? [];
                 
                 // Fetch the latest purchase price for profitability tracking
                 $latestBatch = ProductMovement::where('product_id', $item['product_id'])
@@ -172,7 +180,7 @@ class AdminPOSController extends Controller
                 $standardPrice = $product ? $product->price : $item['price'];
 
                 // 1. Create OrderProduct record with original price and cost tracking
-                OrderProduct::create([
+                $op = OrderProduct::create([
                     'order_id' => $order->id,
                     'product_id' => $item['product_id'],
                     'quantity' => $item['quantity'],
@@ -182,7 +190,18 @@ class AdminPOSController extends Controller
                     'is_gift' => isset($item['isGift']) && $item['isGift'],
                 ]);
 
-                // 2. Deduct inventory via ProductMovement
+                // 2. Insert batch consumption mappings (Guarantees database consistency!)
+                foreach ($fefoBatches as $b) {
+                    DB::table('order_product_batches')->insert([
+                        'order_product_id' => $op->id,
+                        'product_movement_id' => $b['product_movement_id'],
+                        'quantity' => $b['quantity'],
+                        'created_at' => now(),
+                        'updated_at' => now(),
+                    ]);
+                }
+
+                // 3. Deduct inventory via ProductMovement
                 ProductMovement::create([
                     'product_id' => $item['product_id'],
                     'supply_product_id' => null,
@@ -194,7 +213,7 @@ class AdminPOSController extends Controller
                     'created_by' => auth()->id(),
                 ]);
 
-                // 3. Low Stock Email Alert
+                // 4. Low Stock Email Alert
                 if ($product && $product->minimum_quantity > 0) {
                     $newStock = ProductMovement::where('product_id', $product->id)->sum('instock_quantity');
                     if ($newStock <= $product->minimum_quantity) {

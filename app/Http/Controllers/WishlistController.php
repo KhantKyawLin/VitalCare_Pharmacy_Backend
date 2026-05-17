@@ -8,12 +8,12 @@ use App\Models\Product;
 
 class WishlistController extends Controller
 {
-    public function index()
+    /**
+     * Get the authenticated user's wishlist.
+     */
+    public function index(Request $request)
     {
-        $user = auth('api')->user();
-        if (!$user) {
-            return response()->json(['message' => 'Unauthorized'], 401);
-        }
+        $user = $request->user('api');
 
         $wishlists = Wishlist::where('user_id', $user->id)
             ->with('product.pictures')
@@ -22,18 +22,18 @@ class WishlistController extends Controller
         return response()->json($wishlists);
     }
 
+    /**
+     * Add a product to the user's wishlist.
+     */
     public function add(Request $request)
     {
-        $user = auth('api')->user();
-        if (!$user) {
-            return response()->json(['message' => 'Unauthorized'], 401);
-        }
+        $user = $request->user('api');
 
         $request->validate([
             'product_id' => 'required|exists:products,id',
         ]);
 
-        // Don't allow adding expired products to wishlist
+        // Prevent adding expired products to wishlist
         $product = Product::notExpired()->find($request->product_id);
         if (!$product) {
             return response()->json(['message' => 'This product is currently unavailable or expired.'], 422);
@@ -55,12 +55,12 @@ class WishlistController extends Controller
         return response()->json(['message' => 'Added to wishlist', 'wishlist' => $wishlist]);
     }
 
-    public function remove($id)
+    /**
+     * Remove a product from the user's wishlist.
+     */
+    public function remove(Request $request, $id)
     {
-        $user = auth('api')->user();
-        if (!$user) {
-            return response()->json(['message' => 'Unauthorized'], 401);
-        }
+        $user = $request->user('api');
 
         $wishlist = Wishlist::where('user_id', $user->id)
             ->where('product_id', $id)

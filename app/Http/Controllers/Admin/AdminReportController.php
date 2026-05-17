@@ -173,125 +173,208 @@ class AdminReportController extends Controller
     /**
      * Get detailed P&L records (Unified list).
      */
+    /**
+     * Get detailed P&L records (Unified list) with high-performance DB Unions and deferred hydration.
+     */
     public function detailedProfitRecords(Request $request)
     {
         $startDate = Carbon::parse($request->get('start_date', now()->startOfMonth()->toDateString()))->startOfDay();
         $endDate = Carbon::parse($request->get('end_date', now()->endOfDay()->toDateString()))->endOfDay();
         $type = $request->get('type', 'all'); // 'sales', 'losses', 'external'
 
-        $records = collect();
+        // 1. Build light queries mapping primary key + date only to union
+        $ordersQuery = DB::table('orders')
+            ->select('id as source_id', 'created_at as date', DB::raw("'order' as source_type"))
+            ->whereBetween('created_at', [$startDate, $endDate])
+            ->whereIn('status', ['completed', 'refunded']);
 
-        // 1. Sales Records (Grouped by Order)
-        if ($type === 'all' || $type === 'sales') {
-            $orders = Order::with(['orderProducts.product.category'])
-                ->whereBetween('created_at', [$startDate, $endDate])
-                ->whereIn('status', ['completed', 'refunded'])
-                ->get()
-                ->map(function($order) {
-                    $isRefunded = $order->status === 'refunded';
-                    $items = $order->orderProducts->map(function($op) {
-                        $origPrice = $op->original_price ?? $op->price;
-                        return [
-                            'product_name' => $op->product->name ?? 'Unknown',
-                            'category' => $op->product->category->name ?? 'General',
-                            'quantity' => $op->quantity,
-                            'price' => (float)$op->price,
-                            'original_price' => (float)$origPrice,
-                            'purchase_price' => (float)$op->purchase_price,
-                            'subtotal' => (float)($op->price * $op->quantity),
-                            'original_subtotal' => (float)($origPrice * $op->quantity),
-                            'total_cost' => (float)($op->purchase_price * $op->quantity),
-                        ];
-                    });
-                    
-                    $potentialRevenue = $items->sum('original_subtotal');
-                    $netRevenue = (float)$order->total_amount;
-                    $totalDiscount = $potentialRevenue - $netRevenue;
-                    $totalCost = $items->sum('total_cost');
-                    
-                    // If refunded, the revenue is lost, but cost is still there (unless inventory restocked, 
-                    // but for P&L we treat the sale as negated)
-                    $grossProfit = $isRefunded ? -$netRevenue : ($netRevenue - $totalCost);
+        $lossesQuery = DB::table('inventory_adjustments')
+            ->select('id as source_id', 'created_at as date', DB::raw("'loss' as source_type"))
+            ->whereBetween('created_at', [$startDate, $endDate])
+            ->whereIn('reason', ['expired', 'damaged', 'lost', 'returned_to_supplier', 'counting_error']);
 
-                    return [
-                        'id' => 'ORD-' . $order->id,
-                        'date' => $order->created_at->toDateTimeString(),
-                        'type' => $isRefunded ? 'Refunded Order' : 'Sale Order',
-                        'category' => $isRefunded ? 'Refund' : 'POS Sale',
-                        'title' => ($isRefunded ? '[REFUNDED] ' : '') . 'Order ' . $order->receipt_number,
-                        'reference' => $order->receipt_number,
-                        'items' => $items,
-                        'subtotal' => $isRefunded ? -$potentialRevenue : $potentialRevenue,
-                        'discount' => $isRefunded ? 0 : $totalDiscount,
-                        'revenue' => $isRefunded ? -$netRevenue : $netRevenue,
-                        'cost' => $isRefunded ? 0 : $totalCost,
-                        'profit_impact' => $grossProfit,
-                    ];
-                });
-            $records = $records->concat($orders);
+        $externalQuery = DB::table('external_transactions')
+            ->select('id as source_id', 'transaction_date as date', DB::raw("'external' as source_type"))
+            ->whereBetween('transaction_date', [$startDate, $endDate]);
+
+        // 2. Select Union based on requested type filter
+        $query = null;
+        if ($type === 'all') {
+            $query = $ordersQuery->unionAll($lossesQuery)->unionAll($externalQuery);
+        } elseif ($type === 'sales') {
+            $query = $ordersQuery;
+        } elseif ($type === 'losses') {
+            $query = $lossesQuery;
+        } elseif ($type === 'external') {
+            $query = $externalQuery;
         }
 
-        // 2. Inventory Losses
-        if ($type === 'all' || $type === 'losses') {
-            $losses = InventoryAdjustment::with('product')
-                ->whereBetween('created_at', [$startDate, $endDate])
-                ->whereIn('reason', ['expired', 'damaged', 'lost', 'returned_to_supplier', 'counting_error'])
-                ->get()
-                ->map(function($ia) {
-                    $isReturn = $ia->reason === 'returned_to_supplier';
-                    $impact = $isReturn ? 0 : -abs($ia->financial_value); // Returns don't hit profit immediately if credit-tracked
-                    return [
-                        'date' => $ia->created_at->toDateTimeString(),
-                        'type' => $isReturn ? 'Supplier Return' : 'Inventory Loss',
-                        'category' => $ia->reason,
-                        'title' => ($ia->product->name ?? 'Unknown') . " Adjustment",
-                        'revenue' => 0,
-                        'cost' => abs($ia->financial_value),
-                        'profit_impact' => $impact,
-                        'reference' => 'ADJ-' . $ia->id
-                    ];
-                });
-            $records = $records->concat($losses);
-        }
+        // 3. Paginate inside Database using Lightweight UNION subquery
+        $paginatedLight = DB::table(DB::raw("({$query->toSql()}) as combined"))
+            ->mergeBindings($query)
+            ->orderBy('date', 'desc');
 
-        // 3. External Transactions
-        if ($type === 'all' || $type === 'external') {
-            $external = ExternalTransaction::whereBetween('transaction_date', [$startDate, $endDate])
-                ->get()
-                ->map(function($et) {
-                    $impact = $et->type === 'income' ? (float)$et->amount : -(float)$et->amount;
-                    return [
-                        'date' => $et->transaction_date->toDateTimeString(),
-                        'type' => 'External ' . ucfirst($et->type),
-                        'category' => $et->category,
-                        'title' => $et->title,
-                        'revenue' => $et->type === 'income' ? (float)$et->amount : 0,
-                        'cost' => $et->type === 'expense' ? (float)$et->amount : 0,
-                        'profit_impact' => $impact,
-                        'reference' => $et->reference_number ?? 'EXT-' . $et->id
-                    ];
-                });
-            $records = $records->concat($external);
-        }
-
-        // Sort by date desc
-        $sorted = $records->sortByDesc('date')->values();
-
-        // Manual Pagination
         $perPage = (int)$request->get('per_page', 20);
         $page = (int)$request->get('page', 1);
-        $pagedData = $sorted->forPage($page, $perPage);
+
+        $totalCount = $paginatedLight->count();
+        $lightItems = $paginatedLight->offset(($page - 1) * $perPage)->limit($perPage)->get();
+
+        // 4. Deferred Hydration: Load fully loaded relations only for this page's items
+        $orderIds = $lightItems->where('source_type', 'order')->pluck('source_id')->all();
+        $lossIds = $lightItems->where('source_type', 'loss')->pluck('source_id')->all();
+        $externalIds = $lightItems->where('source_type', 'external')->pluck('source_id')->all();
+
+        $orders = empty($orderIds) ? collect() : Order::with(['orderProducts.product.category'])->whereIn('id', $orderIds)->get()->keyBy('id');
+        $losses = empty($lossIds) ? collect() : InventoryAdjustment::with('product')->whereIn('id', $lossIds)->get()->keyBy('id');
+        $externals = empty($externalIds) ? collect() : ExternalTransaction::whereIn('id', $externalIds)->get()->keyBy('id');
+
+        // 5. Build final sorted array output matching original payload structures
+        $mappedData = [];
+        foreach ($lightItems as $item) {
+            if ($item->source_type === 'order') {
+                $order = $orders->get($item->source_id);
+                if ($order) {
+                    $mappedData[] = $this->mapOrderRecord($order);
+                }
+            } elseif ($item->source_type === 'loss') {
+                $loss = $losses->get($item->source_id);
+                if ($loss) {
+                    $mappedData[] = $this->mapLossRecord($loss);
+                }
+            } elseif ($item->source_type === 'external') {
+                $ext = $externals->get($item->source_id);
+                if ($ext) {
+                    $mappedData[] = $this->mapExternalRecord($ext);
+                }
+            }
+        }
+
+        // 6. Fast Lightweight Profit Summary calculations (completely avoiding in-memory totals!)
+        $totalSalesProfit = 0;
+        if ($type === 'all' || $type === 'sales') {
+            $salesProfitData = OrderProduct::whereHas('order', function($q) use ($startDate, $endDate) {
+                    $q->whereBetween('created_at', [$startDate, $endDate])
+                      ->where('status', 'completed');
+                })
+                ->selectRaw('SUM((price - purchase_price) * quantity) as gross_profit')
+                ->first();
+                
+            $completedDiscounts = Order::whereBetween('created_at', [$startDate, $endDate])
+                ->where('status', 'completed')
+                ->sum('discount_amount');
+
+            $refundedOrdersValue = Order::whereBetween('created_at', [$startDate, $endDate])
+                ->where('status', 'refunded')
+                ->sum('total_amount');
+
+            $totalSalesProfit = ($salesProfitData->gross_profit ?? 0) - $completedDiscounts - $refundedOrdersValue;
+        }
+
+        $totalLossesProfit = 0;
+        if ($type === 'all' || $type === 'losses') {
+            $totalLossesProfit = -abs(InventoryAdjustment::whereBetween('created_at', [$startDate, $endDate])
+                ->whereIn('reason', ['expired', 'damaged', 'lost', 'counting_error'])
+                ->sum('financial_value'));
+        }
+
+        $totalExternalProfit = 0;
+        if ($type === 'all' || $type === 'external') {
+            $expenses = ExternalTransaction::where('type', 'expense')
+                ->whereBetween('transaction_date', [$startDate, $endDate])
+                ->sum('amount');
+            $income = ExternalTransaction::where('type', 'income')
+                ->whereBetween('transaction_date', [$startDate, $endDate])
+                ->sum('amount');
+            $totalExternalProfit = $income - $expenses;
+        }
+
+        $totalProfitImpact = $totalSalesProfit + $totalLossesProfit + $totalExternalProfit;
 
         return response()->json([
-            'data' => $pagedData->values(),
-            'total' => $records->count(),
+            'data' => $mappedData,
+            'total' => $totalCount,
             'current_page' => $page,
             'per_page' => $perPage,
-            'last_page' => ceil($records->count() / $perPage),
+            'last_page' => ceil($totalCount / $perPage),
             'summary' => [
-                'total_profit_impact' => $records->sum('profit_impact')
+                'total_profit_impact' => $totalProfitImpact
             ]
         ]);
+    }
+
+    private function mapOrderRecord(Order $order): array
+    {
+        $isRefunded = $order->status === 'refunded';
+        $items = $order->orderProducts->map(function($op) {
+            $origPrice = $op->original_price ?? $op->price;
+            return [
+                'product_name' => $op->product->name ?? 'Unknown',
+                'category' => $op->product->category->name ?? 'General',
+                'quantity' => $op->quantity,
+                'price' => (float)$op->price,
+                'original_price' => (float)$origPrice,
+                'purchase_price' => (float)$op->purchase_price,
+                'subtotal' => (float)($op->price * $op->quantity),
+                'original_subtotal' => (float)($origPrice * $op->quantity),
+                'total_cost' => (float)($op->purchase_price * $op->quantity),
+            ];
+        });
+
+        $potentialRevenue = $items->sum('original_subtotal');
+        $netRevenue = (float)$order->total_amount;
+        $totalDiscount = $potentialRevenue - $netRevenue;
+        $totalCost = $items->sum('total_cost');
+        
+        $grossProfit = $isRefunded ? -$netRevenue : ($netRevenue - $totalCost);
+
+        return [
+            'id' => 'ORD-' . $order->id,
+            'date' => $order->created_at->toDateTimeString(),
+            'type' => $isRefunded ? 'Refunded Order' : 'Sale Order',
+            'category' => $isRefunded ? 'Refund' : 'POS Sale',
+            'title' => ($isRefunded ? '[REFUNDED] ' : '') . 'Order ' . ($order->receipt_number ?? $order->id),
+            'reference' => $order->receipt_number ?? (string)$order->id,
+            'items' => $items,
+            'subtotal' => $isRefunded ? -$potentialRevenue : $potentialRevenue,
+            'discount' => $isRefunded ? 0 : $totalDiscount,
+            'revenue' => $isRefunded ? -$netRevenue : $netRevenue,
+            'cost' => $isRefunded ? 0 : $totalCost,
+            'profit_impact' => $grossProfit,
+        ];
+    }
+
+    private function mapLossRecord(InventoryAdjustment $ia): array
+    {
+        $isReturn = $ia->reason === 'returned_to_supplier';
+        $impact = $isReturn ? 0 : -abs($ia->financial_value);
+        return [
+            'id' => 'ADJ-' . $ia->id,
+            'date' => $ia->created_at->toDateTimeString(),
+            'type' => $isReturn ? 'Supplier Return' : 'Inventory Loss',
+            'category' => $ia->reason,
+            'title' => ($ia->product->name ?? 'Unknown') . " Adjustment",
+            'revenue' => 0,
+            'cost' => abs($ia->financial_value),
+            'profit_impact' => $impact,
+            'reference' => 'ADJ-' . $ia->id
+        ];
+    }
+
+    private function mapExternalRecord(ExternalTransaction $et): array
+    {
+        $impact = $et->type === 'income' ? (float)$et->amount : -(float)$et->amount;
+        return [
+            'id' => 'EXT-' . $et->id,
+            'date' => $et->transaction_date->toDateTimeString(),
+            'type' => 'External ' . ucfirst($et->type),
+            'category' => $et->category,
+            'title' => $et->title,
+            'revenue' => $et->type === 'income' ? (float)$et->amount : 0,
+            'cost' => $et->type === 'expense' ? (float)$et->amount : 0,
+            'profit_impact' => $impact,
+            'reference' => $et->reference_number ?? 'EXT-' . $et->id
+        ];
     }
 
     /**
