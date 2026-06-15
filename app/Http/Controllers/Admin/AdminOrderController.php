@@ -22,6 +22,9 @@ class AdminOrderController extends Controller
         if ($request->has('order_type')) {
             $query->where('order_type', $request->order_type);
         }
+        if ($request->has('prescription_status')) {
+            $query->where('prescription_status', $request->prescription_status);
+        }
 
         return response()->json($query->latest('created_at')->paginate($request->get('per_page', 15)));
     }
