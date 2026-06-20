@@ -9,7 +9,7 @@ use Illuminate\Support\Facades\Validator;
 class FeedbackController extends Controller
 {
     /**
-     * List feedbacks for a health tip (public).
+     * List feedbacks for a health tip (public)
      */
     public function index($healthTipId)
     {
@@ -22,7 +22,7 @@ class FeedbackController extends Controller
     }
 
     /**
-     * Add feedback (authenticated users + admin).
+     * Add feedback (authenticated users + admin)
      */
     public function store(Request $request, $healthTipId)
     {
