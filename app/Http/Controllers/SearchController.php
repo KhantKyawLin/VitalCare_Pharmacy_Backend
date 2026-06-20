@@ -9,7 +9,7 @@ use Illuminate\Http\Request;
 class SearchController extends Controller
 {
     /**
-     * Unified Global Search (Products & Health Tips).
+     * Unified Global Search (Products & Health Tips)
      */
     public function search(Request $request)
     {

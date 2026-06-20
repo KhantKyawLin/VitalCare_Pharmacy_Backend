@@ -9,7 +9,7 @@ use Illuminate\Support\Facades\Validator;
 class ContactUsController extends Controller
 {
     /**
-     * Submit contact form (public).
+     * Submit contact form (public)
      */
     public function store(Request $request)
     {
