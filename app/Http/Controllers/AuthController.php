@@ -12,7 +12,7 @@ use Illuminate\Support\Facades\Validator;
 class AuthController extends Controller
 {
     /**
-     * Login — returns JWT token.
+     * Login — returns JWT token
      */
     public function login()
     {
@@ -34,7 +34,7 @@ class AuthController extends Controller
     }
 
     /**
-     * Register a new user.
+     * Register a new user
      */
     public function register(Request $request)
     {
