@@ -67,7 +67,7 @@ class AuthController extends Controller
     }
 
     /**
-     * Get authenticated user.
+     * Get authenticated user
      */
     public function me()
     {
@@ -89,7 +89,7 @@ class AuthController extends Controller
     }
 
     /**
-     * Logout.
+     * Logout
      */
     public function logout()
     {
@@ -98,7 +98,7 @@ class AuthController extends Controller
     }
 
     /**
-     * Refresh token.
+     * Refresh token
      */
     public function refresh()
     {
