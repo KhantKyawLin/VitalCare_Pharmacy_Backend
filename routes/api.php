@@ -105,6 +105,10 @@ Route::group(['prefix' => 'auth'], function ($router) {
 
         // Health Tip Feedback (authenticated)
         Route::post('health-tips/{id}/feedback', [FeedbackController::class, 'store']);
+
+        // Refill Reminders
+        Route::get('refill-reminders', [\App\Http\Controllers\RefillReminderController::class, 'index']);
+        Route::post('refill-reminders/{reminder}/action', [\App\Http\Controllers\RefillReminderController::class, 'handleAction']);
     });
 });
 

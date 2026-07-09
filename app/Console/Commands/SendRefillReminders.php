@@ -36,9 +36,24 @@ class SendRefillReminders extends Command
             
             // Remind 3 days before it runs out (e.g. if 30 days supply, remind on day 27)
             if ($daysSinceOrder === ($refillDays - 3)) {
-                event(new \App\Events\RefillReminderEvent($item->order->user, $item->product));
-                $this->info("Sent reminder to {$item->order->user->name} for {$item->product->name}");
-                $count++;
+                $dueDate = now()->addDays(3)->toDateString();
+                
+                $exists = \App\Models\RefillReminder::where('order_product_id', $item->id)->exists();
+                
+                if (!$exists) {
+                    $reminder = \App\Models\RefillReminder::create([
+                        'user_id' => $item->order->user_id,
+                        'order_product_id' => $item->id,
+                        'product_id' => $item->product_id,
+                        'reminder_date' => now()->toDateString(),
+                        'due_date' => $dueDate,
+                        'status' => 'pending'
+                    ]);
+
+                    event(new \App\Events\RefillReminderEvent($item->order->user, $item->product, $reminder));
+                    $this->info("Sent reminder to {$item->order->user->name} for {$item->product->name}");
+                    $count++;
+                }
             }
         }
 
