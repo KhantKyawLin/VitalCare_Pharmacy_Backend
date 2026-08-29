@@ -1,66 +1,157 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# 🏥 Vital Care Pharmacy - Backend Engine & API
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+[![Laravel](https://img.shields.io/badge/Laravel-11.x-FF2D20?style=for-the-badge&logo=laravel&logoColor=white)](https://laravel.com)
+[![PHP](https://img.shields.io/badge/PHP-8.2+-777BB4?style=for-the-badge&logo=php&logoColor=white)](https://php.net)
+[![MySQL](https://img.shields.io/badge/MySQL-8.0+-4479A1?style=for-the-badge&logo=mysql&logoColor=white)](https://mysql.com)
+[![WebSockets](https://img.shields.io/badge/WebSockets-Laravel_Reverb-6366F1?style=for-the-badge&logo=socketdotio&logoColor=white)](https://reverb.laravel.com)
+[![Architecture](https://img.shields.io/badge/Architecture-Action_Pattern-0ea5e9?style=for-the-badge)](#-system-architecture--engineering-highlights)
 
-## About Laravel
+A robust, enterprise-grade pharmaceutical backend system engineered to handle hybrid **Online E-Commerce** and in-store **Walk-in Point of Sale (POS)** operations. Built with a focus on high concurrency, audit compliance, FEFO (First-Expired-First-Out) batch inventory tracking, real-time alerting, and decoupled domain action patterns.
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+---
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+## 🌟 Key Domain & Architectural Features
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+### 1. 🛡️ Concurrency-Safe Checkout & Action Architecture
+* **Decoupled Action Classes:** Business logic is extracted from fat controllers into single-responsibility actions (`CheckoutAction`, `AllocateFefoStockAction`, `ApplyPromotionsAction`).
+* **Race-Condition Protection:** Utilizes database-level pessimistic locking (`lockForUpdate()`) inside atomic database transactions (`DB::beginTransaction()`) to prevent double-selling inventory under concurrent load.
+* **Audit-Proof Inventory Movement:** Every stock deduction, restock, disposal, and return is permanently recorded in `product_movements` with negative/positive deltas and associated batch IDs.
 
-## Learning Laravel
+### 2. 💊 FEFO (First-Expired-First-Out) Batch Allocation
+* Automatic identification and depletion of stock from the earliest-expiring batch first.
+* Granular batch tracking stored in `order_product_batches`, enabling full traceability in the event of manufacturer drug recalls.
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
+### 3. 📑 Digital Prescription Review Queue
+* Identifies restricted medications via `requires_prescription` flags.
+* Secure image handling with automatic compression.
+* **Automated Reversal Workflow:** Pharmacist rejection of a prescription automatically cancels restricted items from the order, restores inventory to stock via a reverse movement, and calculates refund adjustments.
 
-You may also try the [Laravel Bootcamp](https://bootcamp.laravel.com), where you will be guided through building a modern Laravel application from scratch.
+### 4. ⏰ Automated Chronic Medication Refill Scanner
+* Custom Artisan CLI command (`pharmacy:send-refill-reminders`) that scans past completed orders for chronic medications.
+* Generates persistent records in `refill_reminders` 3 days before medication depletion and broadcasts live notification events via **Laravel Reverb WebSockets** to the customer's private channel.
 
-If you don't feel like reading, [Laracasts](https://laracasts.com) can help. Laracasts contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+### 5. 🏷️ Dynamic Promotional Engine
+* Tiered promo calculations supporting percentage discounts, fixed reductions, Buy-One-Get-One (BOGO) / gift items, minimum spend thresholds, and maximum discount caps.
 
-## Laravel Sponsors
+### 6. 📊 High-Performance Financial Reporting
+* High-speed SQL `UNION` pagination combining online orders, POS walk-in sales, purchase expenses, and operational overheads directly at the database engine level for instant Profit & Loss generation.
 
-We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the [Laravel Partners program](https://partners.laravel.com).
+---
 
-### Premium Partners
+## 🏗️ System Architecture
 
-- **[Vehikl](https://vehikl.com/)**
-- **[Tighten Co.](https://tighten.co)**
-- **[WebReinvent](https://webreinvent.com/)**
-- **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
-- **[64 Robots](https://64robots.com)**
-- **[Curotec](https://www.curotec.com/services/technologies/laravel/)**
-- **[Cyber-Duck](https://cyber-duck.co.uk)**
-- **[DevSquad](https://devsquad.com/hire-laravel-developers)**
-- **[Jump24](https://jump24.co.uk)**
-- **[Redberry](https://redberry.international/laravel/)**
-- **[Active Logic](https://activelogic.com)**
-- **[byte5](https://byte5.de)**
-- **[OP.GG](https://op.gg)**
+```
+[ React Client (Web / POS) ]
+              │  (REST API + JWT Bearer Tokens)
+              ▼
+    [ Laravel API Router & Middleware (Throttling / RBAC) ]
+              │
+    ┌─────────┴─────────────────────────────────────────┐
+    ▼                                                   ▼
+[ Controllers (Thin) ]                         [ WebSocket Broadcast ]
+    │                                                   │
+    ▼                                                   ▼
+[ Domain Action Services ]                      [ Laravel Reverb ]
+    ├── CheckoutAction                                  │
+    ├── AllocateFefoStockAction                         ▼
+    └── ApplyPromotionsAction               [ Real-Time Client Push ]
+    │
+    ▼ (Pessimistic Lock / Transactions)
+[ MySQL Database Engine ]
+    ├── orders & order_products
+    ├── product_movements (FEFO Batches)
+    ├── refill_reminders
+    └── activity_logs
+```
 
-## Contributing
+---
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+## 🛠️ Technology Stack
 
-## Code of Conduct
+* **Framework:** Laravel 11.x
+* **Language:** PHP 8.2+
+* **Database:** MySQL 8.0+
+* **Real-Time Broadcasting:** Laravel Reverb & Laravel Echo
+* **Authentication:** JWT (JSON Web Tokens) with Role-Based Access Control (RBAC)
+* **Image Processing:** Native GD Library automated compression pipeline
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+---
 
-## Security Vulnerabilities
+## 🚀 Local Installation & Setup
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+### Prerequisites
+* PHP >= 8.2 with `pdo_mysql`, `gd`, `bcmath`, `mbstring` extensions enabled.
+* Composer 2.x
+* MySQL Server (or XAMPP / Docker)
 
-## License
+### 1. Clone the repository
+```bash
+git clone https://github.com/KhantKyawLin/VitalCare_Pharmacy_Backend.git
+cd VitalCare_Pharmacy_Backend
+```
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+### 2. Install PHP dependencies
+```bash
+composer install
+```
+
+### 3. Configure Environment
+```bash
+cp .env.example .env
+php artisan key:generate
+php artisan jwt:secret
+```
+
+Edit your `.env` configuration for database and websocket settings:
+```env
+DB_CONNECTION=mysql
+DB_HOST=127.0.0.1
+DB_PORT=3306
+DB_DATABASE=vitalcare_db
+DB_USERNAME=root
+DB_PASSWORD=
+
+BROADCAST_CONNECTION=reverb
+REVERB_APP_ID=vitalcare_app
+REVERB_APP_KEY=vitalcare_key
+REVERB_APP_SECRET=vitalcare_secret
+REVERB_HOST="localhost"
+REVERB_PORT=8080
+REVERB_SCHEME=http
+```
+
+### 4. Run Migrations & Storage Link
+```bash
+php artisan migrate
+php artisan storage:link
+```
+
+### 5. Start the Development Servers
+
+In terminal 1 (API Server):
+```bash
+php artisan serve
+```
+
+In terminal 2 (WebSocket Server):
+```bash
+php artisan reverb:start
+```
+
+In terminal 3 (Optional: Refill Reminder Cron Simulator):
+```bash
+php artisan pharmacy:send-refill-reminders
+```
+
+---
+
+## 🔒 Security & Performance Features
+
+* **Rate Limiting:** Granular throttling on sensitive endpoints (Checkout: 3/min, Login/Registration: 5/min, Contact forms: 10/min).
+* **Sensitive Data Redaction:** Passwords, tokens, and payment secrets are automatically redacted from activity logs.
+* **MIME Validation:** Multi-step MIME type and magic-byte inspection on prescription and payment proof image uploads.
+
+---
+
+## 📄 License
+This project is open-source under the [MIT License](LICENSE).
