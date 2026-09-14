@@ -37,6 +37,43 @@ class AdminCategoryController extends Controller
 
     public function store(Request $request)
     {
+        // Bulk create: { categories: ['Name1', 'Name2', ...] }
+        if ($request->has('categories') && is_array($request->categories)) {
+            $validator = Validator::make($request->all(), [
+                'categories' => 'required|array|min:1',
+                'categories.*' => 'required|string|max:100',
+            ]);
+            if ($validator->fails()) return response()->json($validator->errors(), 422);
+
+            $created = [];
+            $errors = [];
+
+            foreach ($request->categories as $index => $name) {
+                $name = trim($name);
+                if (empty($name)) continue;
+
+                if (Category::where('name', $name)->exists()) {
+                    $errors[] = "'{$name}' already exists";
+                    continue;
+                }
+
+                $category = Category::create(['name' => $name]);
+                ActivityLog::log('created', 'Category', $category->id, "Category '{$category->name}' created");
+                $created[] = $category;
+            }
+
+            if (empty($created) && !empty($errors)) {
+                return response()->json(['message' => 'No categories created', 'errors' => $errors], 422);
+            }
+
+            return response()->json([
+                'message' => count($created) . ' categor' . (count($created) === 1 ? 'y' : 'ies') . ' created',
+                'categories' => $created,
+                'errors' => $errors,
+            ], 201);
+        }
+
+        // Single create: { name: 'Name' }
         $validator = Validator::make($request->all(), [
             'name' => 'required|string|max:100|unique:categories,name',
         ]);
