@@ -31,6 +31,43 @@ class AdminUnitController extends Controller
 
     public function store(Request $request)
     {
+        // Bulk create: { units: ['Strip', 'Box', ...] }
+        if ($request->has('units') && is_array($request->units)) {
+            $validator = Validator::make($request->all(), [
+                'units' => 'required|array|min:1',
+                'units.*' => 'required|string|max:50',
+            ]);
+            if ($validator->fails()) return response()->json($validator->errors(), 422);
+
+            $created = [];
+            $errors = [];
+
+            foreach ($request->units as $index => $name) {
+                $name = trim($name);
+                if (empty($name)) continue;
+
+                if (Unit::where('name', $name)->exists()) {
+                    $errors[] = "'{$name}' already exists";
+                    continue;
+                }
+
+                $unit = Unit::create(['name' => $name]);
+                ActivityLog::log('created', 'Unit', $unit->id, "Unit '{$unit->name}' created");
+                $created[] = $unit;
+            }
+
+            if (empty($created) && !empty($errors)) {
+                return response()->json(['message' => 'No units created', 'errors' => $errors], 422);
+            }
+
+            return response()->json([
+                'message' => count($created) . ' unit' . (count($created) === 1 ? '' : 's') . ' created',
+                'units' => $created,
+                'errors' => $errors,
+            ], 201);
+        }
+
+        // Single create: { name: 'Name' }
         $validator = Validator::make($request->all(), [
             'name' => 'required|string|max:50|unique:units,name',
         ]);
