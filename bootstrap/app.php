@@ -21,15 +21,7 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {
-        $exceptions->render(function (\Throwable $e, \Illuminate\Http\Request $request) {
-            return response()->json([
-                'error_message' => $e->getMessage(),
-                'error_type' => get_class($e),
-                'error_file' => $e->getFile(),
-                'error_line' => $e->getLine(),
-                'trace' => array_slice(explode("\n", $e->getTraceAsString()), 0, 8),
-            ], 500);
-        });
+        //
     })->create();
 
 if (getenv('APP_STORAGE_PATH') || isset($_ENV['APP_STORAGE_PATH'])) {
