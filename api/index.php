@@ -1,5 +1,15 @@
 <?php
 
+// CORS Headers for serverless API
+header('Access-Control-Allow-Origin: *');
+header('Access-Control-Allow-Methods: GET, POST, PUT, PATCH, DELETE, OPTIONS');
+header('Access-Control-Allow-Headers: Origin, Content-Type, Accept, Authorization, X-Requested-With, X-XSRF-TOKEN');
+
+if (isset($_SERVER['REQUEST_METHOD']) && $_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
+    http_response_code(200);
+    exit;
+}
+
 // Prepare writable /tmp directories for serverless environment
 $dirs = [
     '/tmp/storage/app/public',
@@ -34,14 +44,6 @@ $_SERVER['LOG_CHANNEL'] = 'errorlog';
 putenv('APP_STORAGE_PATH=/tmp/storage');
 $_ENV['APP_STORAGE_PATH'] = '/tmp/storage';
 $_SERVER['APP_STORAGE_PATH'] = '/tmp/storage';
-
-// Fix Vercel stripping /api from REQUEST_URI
-if (isset($_SERVER['REQUEST_URI'])) {
-    $uri = $_SERVER['REQUEST_URI'];
-    if (!str_starts_with($uri, '/api') && $uri !== '/' && !str_starts_with($uri, '/storage')) {
-        $_SERVER['REQUEST_URI'] = '/api' . $uri;
-    }
-}
 
 try {
     require __DIR__ . '/../public/index.php';
