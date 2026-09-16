@@ -19,6 +19,10 @@ putenv('VERCEL=1');
 $_ENV['VERCEL'] = '1';
 $_SERVER['VERCEL'] = '1';
 
+putenv('APP_MAINTENANCE_DRIVER=cache');
+$_ENV['APP_MAINTENANCE_DRIVER'] = 'cache';
+$_SERVER['APP_MAINTENANCE_DRIVER'] = 'cache';
+
 putenv('BROADCAST_CONNECTION=null');
 $_ENV['BROADCAST_CONNECTION'] = 'null';
 $_SERVER['BROADCAST_CONNECTION'] = 'null';
