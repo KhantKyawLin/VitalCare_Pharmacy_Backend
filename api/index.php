@@ -11,9 +11,15 @@ $dirs = [
 
 foreach ($dirs as $dir) {
     if (!is_dir($dir)) {
-        mkdir($dir, 0755, true);
+        mkdir($dir, 0777, true);
     }
 }
+
+putenv('VERCEL=1');
+$_ENV['VERCEL'] = '1';
+
+putenv('LOG_CHANNEL=errorlog');
+$_ENV['LOG_CHANNEL'] = 'errorlog';
 
 putenv('APP_STORAGE_PATH=/tmp/storage');
 $_ENV['APP_STORAGE_PATH'] = '/tmp/storage';

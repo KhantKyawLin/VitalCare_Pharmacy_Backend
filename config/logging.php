@@ -18,7 +18,7 @@ return [
     |
     */
 
-    'default' => env('LOG_CHANNEL', 'stack'),
+    'default' => env('LOG_CHANNEL', (isset($_ENV['VERCEL']) || getenv('VERCEL')) ? 'errorlog' : 'stack'),
 
     /*
     |--------------------------------------------------------------------------
@@ -60,7 +60,7 @@ return [
 
         'single' => [
             'driver' => 'single',
-            'path' => storage_path('logs/laravel.log'),
+            'path' => (isset($_ENV['VERCEL']) || getenv('VERCEL')) ? '/tmp/storage/logs/laravel.log' : storage_path('logs/laravel.log'),
             'level' => env('LOG_LEVEL', 'debug'),
             'replace_placeholders' => true,
         ],
@@ -124,7 +124,7 @@ return [
         ],
 
         'emergency' => [
-            'path' => storage_path('logs/laravel.log'),
+            'path' => (isset($_ENV['VERCEL']) || getenv('VERCEL')) ? '/tmp/storage/logs/laravel.log' : storage_path('logs/laravel.log'),
         ],
 
     ],
