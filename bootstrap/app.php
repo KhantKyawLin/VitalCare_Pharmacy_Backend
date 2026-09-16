@@ -26,6 +26,7 @@ return Application::configure(basePath: dirname(__DIR__))
                 'error_type' => get_class($e),
                 'error_file' => $e->getFile(),
                 'error_line' => $e->getLine(),
+                'trace' => array_slice(explode("\n", $e->getTraceAsString()), 0, 8),
             ], 500);
         });
     })->create();
