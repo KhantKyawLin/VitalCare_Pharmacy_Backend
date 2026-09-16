@@ -17,12 +17,19 @@ foreach ($dirs as $dir) {
 
 putenv('VERCEL=1');
 $_ENV['VERCEL'] = '1';
+$_SERVER['VERCEL'] = '1';
+
+putenv('BROADCAST_CONNECTION=null');
+$_ENV['BROADCAST_CONNECTION'] = 'null';
+$_SERVER['BROADCAST_CONNECTION'] = 'null';
 
 putenv('LOG_CHANNEL=errorlog');
 $_ENV['LOG_CHANNEL'] = 'errorlog';
+$_SERVER['LOG_CHANNEL'] = 'errorlog';
 
 putenv('APP_STORAGE_PATH=/tmp/storage');
 $_ENV['APP_STORAGE_PATH'] = '/tmp/storage';
+$_SERVER['APP_STORAGE_PATH'] = '/tmp/storage';
 
 try {
     require __DIR__ . '/../public/index.php';

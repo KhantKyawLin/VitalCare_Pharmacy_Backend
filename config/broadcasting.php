@@ -15,7 +15,7 @@ return [
     |
     */
 
-    'default' => env('BROADCAST_CONNECTION') ?: 'null',
+    'default' => (isset($_ENV['VERCEL']) || getenv('VERCEL')) ? 'null' : (env('BROADCAST_CONNECTION') ?: 'reverb'),
 
     /*
     |--------------------------------------------------------------------------
