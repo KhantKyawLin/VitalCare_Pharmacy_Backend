@@ -35,6 +35,14 @@ putenv('APP_STORAGE_PATH=/tmp/storage');
 $_ENV['APP_STORAGE_PATH'] = '/tmp/storage';
 $_SERVER['APP_STORAGE_PATH'] = '/tmp/storage';
 
+// Fix Vercel stripping /api from REQUEST_URI
+if (isset($_SERVER['REQUEST_URI'])) {
+    $uri = $_SERVER['REQUEST_URI'];
+    if (!str_starts_with($uri, '/api') && $uri !== '/' && !str_starts_with($uri, '/storage')) {
+        $_SERVER['REQUEST_URI'] = '/api' . $uri;
+    }
+}
+
 try {
     require __DIR__ . '/../public/index.php';
 } catch (\Throwable $e) {
