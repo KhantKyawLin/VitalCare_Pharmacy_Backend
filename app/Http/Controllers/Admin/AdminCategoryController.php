@@ -75,7 +75,7 @@ class AdminCategoryController extends Controller
             $verb = $failedCount > 1 ? 'are' : 'is';
 
             if ($successCount > 0 && $failedCount > 0) {
-                $msg = "{$successCount} succeeded and {$failedCount} failed [{$namesFormatted}]. {$namesFormatted} {$verb} already present.";
+                $msg = "{$successCount} succeeded and {$failedCount} failed. {$namesFormatted} {$verb} already present.";
                 return response()->json([
                     'status' => 'partial',
                     'message' => $msg,
@@ -87,7 +87,7 @@ class AdminCategoryController extends Controller
             }
 
             if ($successCount === 0 && $failedCount > 0) {
-                $msg = "{$failedCount} failed [{$namesFormatted}]. {$namesFormatted} {$verb} already present.";
+                $msg = "{$failedCount} failed. {$namesFormatted} {$verb} already present.";
                 return response()->json([
                     'status' => 'failed',
                     'message' => $msg,
