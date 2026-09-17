@@ -46,43 +46,86 @@ class AdminCategoryController extends Controller
             if ($validator->fails()) return response()->json($validator->errors(), 422);
 
             $created = [];
-            $errors = [];
+            $failedNames = [];
+            $seenInBatch = [];
 
-            foreach ($request->categories as $index => $name) {
-                $name = trim($name);
+            foreach ($request->categories as $rawName) {
+                $name = trim($rawName);
                 if (empty($name)) continue;
 
-                if (Category::where('name', $name)->exists()) {
-                    $errors[] = "'{$name}' already exists";
+                $lower = strtolower($name);
+
+                // Check duplicate in this batch or already in database
+                if (in_array($lower, $seenInBatch) || Category::whereRaw('LOWER(name) = ?', [$lower])->exists()) {
+                    if (!in_array($name, $failedNames)) {
+                        $failedNames[] = $name;
+                    }
                     continue;
                 }
 
+                $seenInBatch[] = $lower;
                 $category = Category::create(['name' => $name]);
                 ActivityLog::log('created', 'Category', $category->id, "Category '{$category->name}' created");
                 $created[] = $category;
             }
 
-            if (empty($created) && !empty($errors)) {
-                return response()->json(['message' => 'No categories created', 'errors' => $errors], 422);
+            $successCount = count($created);
+            $failedCount = count($failedNames);
+            $namesFormatted = implode(', ', $failedNames);
+            $verb = $failedCount > 1 ? 'are' : 'is';
+
+            if ($successCount > 0 && $failedCount > 0) {
+                $msg = "{$successCount} succeeded and {$failedCount} failed [{$namesFormatted}]. {$namesFormatted} {$verb} already present.";
+                return response()->json([
+                    'status' => 'partial',
+                    'message' => $msg,
+                    'created_count' => $successCount,
+                    'failed_count' => $failedCount,
+                    'failed_names' => $failedNames,
+                    'categories' => $created,
+                ], 200);
+            }
+
+            if ($successCount === 0 && $failedCount > 0) {
+                $msg = "{$failedCount} failed [{$namesFormatted}]. {$namesFormatted} {$verb} already present.";
+                return response()->json([
+                    'status' => 'failed',
+                    'message' => $msg,
+                    'created_count' => 0,
+                    'failed_count' => $failedCount,
+                    'failed_names' => $failedNames,
+                ], 422);
             }
 
             return response()->json([
-                'message' => count($created) . ' categor' . (count($created) === 1 ? 'y' : 'ies') . ' created',
+                'status' => 'success',
+                'message' => "{$successCount} categor" . ($successCount === 1 ? 'y' : 'ies') . " created successfully.",
                 'categories' => $created,
-                'errors' => $errors,
             ], 201);
         }
 
         // Single create: { name: 'Name' }
-        $validator = Validator::make($request->all(), [
+        $name = trim($request->name);
+        $validator = Validator::make(['name' => $name], [
             'name' => 'required|string|max:100|unique:categories,name',
+        ], [
+            'name.unique' => "The category name '{$name}' is already taken.",
         ]);
-        if ($validator->fails()) return response()->json($validator->errors(), 422);
+        if ($validator->fails()) {
+            return response()->json([
+                'message' => "The category name '{$name}' is already taken.",
+                'errors' => $validator->errors()
+            ], 422);
+        }
 
-        $category = Category::create(['name' => $request->name]);
+        $category = Category::create(['name' => $name]);
         ActivityLog::log('created', 'Category', $category->id, "Category '{$category->name}' created");
 
-        return response()->json(['message' => 'Category created', 'category' => $category], 201);
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Category created successfully.',
+            'category' => $category
+        ], 201);
     }
 
     public function update(Request $request, $id)

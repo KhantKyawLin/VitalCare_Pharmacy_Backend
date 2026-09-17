@@ -40,43 +40,86 @@ class AdminUnitController extends Controller
             if ($validator->fails()) return response()->json($validator->errors(), 422);
 
             $created = [];
-            $errors = [];
+            $failedNames = [];
+            $seenInBatch = [];
 
-            foreach ($request->units as $index => $name) {
-                $name = trim($name);
+            foreach ($request->units as $rawName) {
+                $name = trim($rawName);
                 if (empty($name)) continue;
 
-                if (Unit::where('name', $name)->exists()) {
-                    $errors[] = "'{$name}' already exists";
+                $lower = strtolower($name);
+
+                // Check duplicate in this batch or already in database
+                if (in_array($lower, $seenInBatch) || Unit::whereRaw('LOWER(name) = ?', [$lower])->exists()) {
+                    if (!in_array($name, $failedNames)) {
+                        $failedNames[] = $name;
+                    }
                     continue;
                 }
 
+                $seenInBatch[] = $lower;
                 $unit = Unit::create(['name' => $name]);
                 ActivityLog::log('created', 'Unit', $unit->id, "Unit '{$unit->name}' created");
                 $created[] = $unit;
             }
 
-            if (empty($created) && !empty($errors)) {
-                return response()->json(['message' => 'No units created', 'errors' => $errors], 422);
+            $successCount = count($created);
+            $failedCount = count($failedNames);
+            $namesFormatted = implode(', ', $failedNames);
+            $verb = $failedCount > 1 ? 'are' : 'is';
+
+            if ($successCount > 0 && $failedCount > 0) {
+                $msg = "{$successCount} succeeded and {$failedCount} failed [{$namesFormatted}]. {$namesFormatted} {$verb} already present.";
+                return response()->json([
+                    'status' => 'partial',
+                    'message' => $msg,
+                    'created_count' => $successCount,
+                    'failed_count' => $failedCount,
+                    'failed_names' => $failedNames,
+                    'units' => $created,
+                ], 200);
+            }
+
+            if ($successCount === 0 && $failedCount > 0) {
+                $msg = "{$failedCount} failed [{$namesFormatted}]. {$namesFormatted} {$verb} already present.";
+                return response()->json([
+                    'status' => 'failed',
+                    'message' => $msg,
+                    'created_count' => 0,
+                    'failed_count' => $failedCount,
+                    'failed_names' => $failedNames,
+                ], 422);
             }
 
             return response()->json([
-                'message' => count($created) . ' unit' . (count($created) === 1 ? '' : 's') . ' created',
+                'status' => 'success',
+                'message' => "{$successCount} unit" . ($successCount === 1 ? '' : 's') . " created successfully.",
                 'units' => $created,
-                'errors' => $errors,
             ], 201);
         }
 
         // Single create: { name: 'Name' }
-        $validator = Validator::make($request->all(), [
+        $name = trim($request->name);
+        $validator = Validator::make(['name' => $name], [
             'name' => 'required|string|max:50|unique:units,name',
+        ], [
+            'name.unique' => "The unit name '{$name}' is already taken.",
         ]);
-        if ($validator->fails()) return response()->json($validator->errors(), 422);
+        if ($validator->fails()) {
+            return response()->json([
+                'message' => "The unit name '{$name}' is already taken.",
+                'errors' => $validator->errors()
+            ], 422);
+        }
 
-        $unit = Unit::create(['name' => $request->name]);
+        $unit = Unit::create(['name' => $name]);
         ActivityLog::log('created', 'Unit', $unit->id, "Unit '{$unit->name}' created");
 
-        return response()->json(['message' => 'Unit created', 'unit' => $unit], 201);
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Unit created successfully.',
+            'unit' => $unit
+        ], 201);
     }
 
     public function update(Request $request, $id)
