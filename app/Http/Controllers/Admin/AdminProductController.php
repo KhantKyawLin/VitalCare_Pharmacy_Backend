@@ -10,6 +10,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Validation\Rule;
 
 class AdminProductController extends Controller
 {
@@ -70,8 +71,15 @@ class AdminProductController extends Controller
      */
     public function store(Request $request)
     {
+        $name = trim($request->name ?? '');
         $validator = Validator::make($request->all(), [
-            'name' => 'required|string|max:100|min:3',
+            'name' => [
+                'required',
+                'string',
+                'max:100',
+                'min:3',
+                Rule::unique('products', 'name')->whereNull('deleted_at')
+            ],
             'category_id' => 'required|exists:categories,id',
             'unit_id' => 'required|exists:units,id',
             'description' => 'nullable|string|max:500',
@@ -87,6 +95,8 @@ class AdminProductController extends Controller
 
             'images' => 'nullable|array|max:5',
             'images.*' => 'image|mimes:jpeg,png,gif|max:2048',
+        ], [
+            'name.unique' => "The product name '{$name}' is already present.",
         ]);
 
         if ($validator->fails()) {
@@ -147,17 +157,57 @@ class AdminProductController extends Controller
         }
 
         $results = [];
+        $created = [];
+        $failedNames = [];
+        $seenInBatch = [];
+
         DB::beginTransaction();
         try {
             foreach ($request->products as $index => $productData) {
+                $name = trim($productData['name'] ?? '');
+                $lower = strtolower($name);
+
+                if (in_array($lower, $seenInBatch) || Product::whereRaw('LOWER(name) = ?', [$lower])->whereNull('deleted_at')->exists()) {
+                    if (!in_array($name, $failedNames)) {
+                        $failedNames[] = $name;
+                    }
+                    $results[] = ['index' => $index, 'name' => $name, 'status' => 'skipped', 'reason' => 'already present'];
+                    continue;
+                }
+
+                $seenInBatch[] = $lower;
                 $product = Product::create($productData);
+                $created[] = $product;
                 $results[] = ['index' => $index, 'id' => $product->id, 'name' => $product->name, 'status' => 'created'];
             }
             DB::commit();
 
+            $successCount = count($created);
+            $failedCount = count($failedNames);
+            $namesFormatted = implode(', ', $failedNames);
+            $verb = $failedCount > 1 ? 'are' : 'is';
+
+            if ($successCount > 0 && $failedCount > 0) {
+                $msg = "{$successCount} succeeded and {$failedCount} failed. {$namesFormatted} {$verb} already present.";
+                return response()->json([
+                    'status' => 'partial',
+                    'message' => $msg,
+                    'results' => $results
+                ], 200);
+            }
+
+            if ($successCount === 0 && $failedCount > 0) {
+                $msg = "{$failedCount} failed. {$namesFormatted} {$verb} already present.";
+                return response()->json([
+                    'status' => 'failed',
+                    'message' => $msg,
+                    'results' => $results
+                ], 422);
+            }
+
             ActivityLog::log('bulk_created', 'Product', null, count($results) . ' products bulk created');
 
-            return response()->json(['message' => 'Bulk create successful', 'results' => $results], 201);
+            return response()->json(['status' => 'success', 'message' => 'Bulk create successful', 'results' => $results], 201);
         } catch (\Exception $e) {
             DB::rollBack();
             return response()->json(['error' => 'Bulk create failed: ' . $e->getMessage()], 500);
@@ -172,8 +222,15 @@ class AdminProductController extends Controller
         $product = Product::findOrFail($id);
         $old = $product->toArray();
 
+        $name = trim($request->name ?? '');
         $validator = Validator::make($request->all(), [
-            'name' => 'sometimes|string|max:100|min:3',
+            'name' => [
+                'sometimes',
+                'string',
+                'max:100',
+                'min:3',
+                Rule::unique('products', 'name')->ignore($id)->whereNull('deleted_at')
+            ],
             'category_id' => 'sometimes|exists:categories,id',
             'unit_id' => 'sometimes|exists:units,id',
             'price' => 'nullable|numeric|min:0',
@@ -184,6 +241,8 @@ class AdminProductController extends Controller
 
             'images' => 'nullable|array|max:5',
             'images.*' => 'image|mimes:jpeg,png,gif|max:2048',
+        ], [
+            'name.unique' => "The product name '{$name}' is already present.",
         ]);
 
         if ($validator->fails()) {

@@ -103,11 +103,11 @@ class AdminUnitController extends Controller
         $validator = Validator::make(['name' => $name], [
             'name' => 'required|string|max:50|unique:units,name',
         ], [
-            'name.unique' => "The unit name '{$name}' is already taken.",
+            'name.unique' => "The unit name '{$name}' is already present.",
         ]);
         if ($validator->fails()) {
             return response()->json([
-                'message' => "The unit name '{$name}' is already taken.",
+                'message' => "The unit name '{$name}' is already present.",
                 'errors' => $validator->errors()
             ], 422);
         }
@@ -125,14 +125,22 @@ class AdminUnitController extends Controller
     public function update(Request $request, $id)
     {
         $unit = Unit::findOrFail($id);
-        $validator = Validator::make($request->all(), [
+        $name = trim($request->name);
+        $validator = Validator::make(['name' => $name], [
             'name' => 'required|string|max:50|unique:units,name,' . $id,
+        ], [
+            'name.unique' => "The unit name '{$name}' is already present.",
         ]);
-        if ($validator->fails()) return response()->json($validator->errors(), 422);
+        if ($validator->fails()) {
+            return response()->json([
+                'message' => "The unit name '{$name}' is already present.",
+                'errors' => $validator->errors()
+            ], 422);
+        }
 
         $old = $unit->name;
-        $unit->update(['name' => $request->name]);
-        ActivityLog::log('updated', 'Unit', $id, "Unit renamed from '{$old}' to '{$request->name}'");
+        $unit->update(['name' => $name]);
+        ActivityLog::log('updated', 'Unit', $id, "Unit renamed from '{$old}' to '{$name}'");
 
         return response()->json(['message' => 'Unit updated', 'unit' => $unit]);
     }

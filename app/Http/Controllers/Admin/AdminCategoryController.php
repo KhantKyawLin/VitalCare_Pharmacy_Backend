@@ -109,11 +109,11 @@ class AdminCategoryController extends Controller
         $validator = Validator::make(['name' => $name], [
             'name' => 'required|string|max:100|unique:categories,name',
         ], [
-            'name.unique' => "The category name '{$name}' is already taken.",
+            'name.unique' => "The category name '{$name}' is already present.",
         ]);
         if ($validator->fails()) {
             return response()->json([
-                'message' => "The category name '{$name}' is already taken.",
+                'message' => "The category name '{$name}' is already present.",
                 'errors' => $validator->errors()
             ], 422);
         }
@@ -131,14 +131,22 @@ class AdminCategoryController extends Controller
     public function update(Request $request, $id)
     {
         $category = Category::findOrFail($id);
-        $validator = Validator::make($request->all(), [
+        $name = trim($request->name);
+        $validator = Validator::make(['name' => $name], [
             'name' => 'required|string|max:100|unique:categories,name,' . $id,
+        ], [
+            'name.unique' => "The category name '{$name}' is already present.",
         ]);
-        if ($validator->fails()) return response()->json($validator->errors(), 422);
+        if ($validator->fails()) {
+            return response()->json([
+                'message' => "The category name '{$name}' is already present.",
+                'errors' => $validator->errors()
+            ], 422);
+        }
 
         $old = $category->name;
-        $category->update(['name' => $request->name]);
-        ActivityLog::log('updated', 'Category', $id, "Category renamed from '{$old}' to '{$request->name}'");
+        $category->update(['name' => $name]);
+        ActivityLog::log('updated', 'Category', $id, "Category renamed from '{$old}' to '{$name}'");
 
         return response()->json(['message' => 'Category updated', 'category' => $category]);
     }
