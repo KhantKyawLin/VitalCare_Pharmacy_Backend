@@ -8,12 +8,40 @@ use Illuminate\Support\Facades\Hash;
 use App\Models\User;
 use App\Models\PasswordResetRequest;
 use Illuminate\Support\Facades\Validator;
+use OpenApi\Attributes as OA;
 
 class AuthController extends Controller
 {
-    /**
-     * Login — returns JWT token
-     */
+    #[OA\Post(
+        path: '/api/auth/login',
+        summary: 'User & Admin login',
+        description: 'Authenticates user credentials and returns a JWT Bearer token.',
+        tags: ['Authentication'],
+        requestBody: new OA\RequestBody(
+            required: true,
+            content: new OA\JsonContent(
+                required: ['email', 'password'],
+                properties: [
+                    new OA\Property(property: 'email', type: 'string', format: 'email', example: 'admin@vitalcare.com'),
+                    new OA\Property(property: 'password', type: 'string', format: 'password', example: 'Admin@122'),
+                ]
+            )
+        ),
+        responses: [
+            new OA\Response(
+                response: 200,
+                description: 'Successful login',
+                content: new OA\JsonContent(
+                    properties: [
+                        new OA\Property(property: 'access_token', type: 'string', example: 'eyJhbGciOi...'),
+                        new OA\Property(property: 'token_type', type: 'string', example: 'bearer'),
+                        new OA\Property(property: 'expires_in', type: 'integer', example: 3600),
+                    ]
+                )
+            ),
+            new OA\Response(response: 401, description: 'Invalid email or password')
+        ]
+    )]
     public function login()
     {
         $credentials = request(['email', 'password']);
@@ -66,9 +94,28 @@ class AuthController extends Controller
         return $this->respondWithToken($token);
     }
 
-    /**
-     * Get authenticated user
-     */
+    #[OA\Get(
+        path: '/api/auth/me',
+        summary: 'Get authenticated user profile and permissions',
+        tags: ['Authentication'],
+        security: [['bearerAuth' => []]],
+        responses: [
+            new OA\Response(
+                response: 200,
+                description: 'User details with assigned permissions',
+                content: new OA\JsonContent(
+                    properties: [
+                        new OA\Property(property: 'id', type: 'integer', example: 1),
+                        new OA\Property(property: 'name', type: 'string', example: 'System Admin'),
+                        new OA\Property(property: 'email', type: 'string', example: 'admin@vitalcare.com'),
+                        new OA\Property(property: 'role', type: 'string', example: 'admin'),
+                        new OA\Property(property: 'permissions', type: 'array', items: new OA\Items(type: 'string', example: 'categories.crud'))
+                    ]
+                )
+            ),
+            new OA\Response(response: 401, description: 'Unauthenticated')
+        ]
+    )]
     public function me()
     {
         $user = auth('api')->user();

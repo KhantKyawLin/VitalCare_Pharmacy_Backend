@@ -7,9 +7,30 @@ use App\Models\Unit;
 use App\Models\ActivityLog;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
+use OpenApi\Attributes as OA;
 
 class AdminUnitController extends Controller
 {
+    #[OA\Get(
+        path: '/api/admin/units',
+        summary: 'List all units with statistics',
+        tags: ['Units'],
+        security: [['bearerAuth' => []]],
+        responses: [
+            new OA\Response(
+                response: 200,
+                description: 'List of units with product count and most used unit metric',
+                content: new OA\JsonContent(
+                    properties: [
+                        new OA\Property(property: 'units', type: 'array', items: new OA\Items(type: 'object')),
+                        new OA\Property(property: 'stats', type: 'object')
+                    ]
+                )
+            ),
+            new OA\Response(response: 401, description: 'Unauthenticated'),
+            new OA\Response(response: 403, description: 'Forbidden')
+        ]
+    )]
     public function index()
     {
         $units = Unit::withCount('products')->get();
@@ -29,6 +50,34 @@ class AdminUnitController extends Controller
         ]);
     }
 
+    #[OA\Post(
+        path: '/api/admin/units',
+        summary: 'Create single unit or bulk units',
+        description: 'Provide "name" for single creation, or "units" array for bulk creation with duplicate control.',
+        tags: ['Units'],
+        security: [['bearerAuth' => []]],
+        requestBody: new OA\RequestBody(
+            required: true,
+            content: new OA\JsonContent(
+                properties: [
+                    new OA\Property(property: 'name', type: 'string', example: 'Strip', description: 'Used for single creation'),
+                    new OA\Property(
+                        property: 'units',
+                        type: 'array',
+                        items: new OA\Items(type: 'string'),
+                        example: ['Strip', 'Box', 'Bottle', 'Piece'],
+                        description: 'Used for bulk creation'
+                    )
+                ]
+            )
+        ),
+        responses: [
+            new OA\Response(response: 201, description: 'Unit or units created successfully'),
+            new OA\Response(response: 200, description: 'Partial creation (some succeeded, duplicates failed)'),
+            new OA\Response(response: 422, description: 'Validation error or already present'),
+            new OA\Response(response: 401, description: 'Unauthenticated')
+        ]
+    )]
     public function store(Request $request)
     {
         // Bulk create: { units: ['Strip', 'Box', ...] }

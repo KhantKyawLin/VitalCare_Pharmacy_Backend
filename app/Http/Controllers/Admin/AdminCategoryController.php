@@ -8,9 +8,30 @@ use App\Models\Unit;
 use App\Models\ActivityLog;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
+use OpenApi\Attributes as OA;
 
 class AdminCategoryController extends Controller
 {
+    #[OA\Get(
+        path: '/api/admin/categories',
+        summary: 'List all categories with statistics',
+        tags: ['Categories'],
+        security: [['bearerAuth' => []]],
+        responses: [
+            new OA\Response(
+                response: 200,
+                description: 'List of categories with products count and metrics',
+                content: new OA\JsonContent(
+                    properties: [
+                        new OA\Property(property: 'categories', type: 'array', items: new OA\Items(type: 'object')),
+                        new OA\Property(property: 'stats', type: 'object')
+                    ]
+                )
+            ),
+            new OA\Response(response: 401, description: 'Unauthenticated'),
+            new OA\Response(response: 403, description: 'Forbidden')
+        ]
+    )]
     public function index()
     {
         $categories = Category::withCount('products')->get();
@@ -35,6 +56,34 @@ class AdminCategoryController extends Controller
         ]);
     }
 
+    #[OA\Post(
+        path: '/api/admin/categories',
+        summary: 'Create single category or bulk categories',
+        description: 'Provide "name" for single creation, or "categories" array for bulk creation with duplicate control.',
+        tags: ['Categories'],
+        security: [['bearerAuth' => []]],
+        requestBody: new OA\RequestBody(
+            required: true,
+            content: new OA\JsonContent(
+                properties: [
+                    new OA\Property(property: 'name', type: 'string', example: 'Pain & Fever Relief', description: 'Used for single creation'),
+                    new OA\Property(
+                        property: 'categories',
+                        type: 'array',
+                        items: new OA\Items(type: 'string'),
+                        example: ['Pain & Fever Relief', 'Eye Care', 'Digestive & Rehydration'],
+                        description: 'Used for bulk creation'
+                    )
+                ]
+            )
+        ),
+        responses: [
+            new OA\Response(response: 201, description: 'Category or categories created successfully'),
+            new OA\Response(response: 200, description: 'Partial creation (some succeeded, duplicates failed)'),
+            new OA\Response(response: 422, description: 'Validation error or already present'),
+            new OA\Response(response: 401, description: 'Unauthenticated')
+        ]
+    )]
     public function store(Request $request)
     {
         // Bulk create: { categories: ['Name1', 'Name2', ...] }
