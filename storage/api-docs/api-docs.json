@@ -11,8 +11,12 @@
     },
     "servers": [
         {
-            "url": "http://localhost",
-            "description": "VitalCare Pharmacy API Server"
+            "url": "/",
+            "description": "Current Host & Port (Auto-detect)"
+        },
+        {
+            "url": "http://127.0.0.1:8000",
+            "description": "Local Server (127.0.0.1:8000)"
         }
     ],
     "paths": {

@@ -11,8 +11,12 @@ use OpenApi\Attributes as OA;
     contact: new OA\Contact(name: "VitalCare Team", email: "admin@vitalcare.com")
 )]
 #[OA\Server(
-    url: L5_SWAGGER_CONST_HOST,
-    description: "VitalCare Pharmacy API Server"
+    url: "/",
+    description: "Current Host & Port (Auto-detect)"
+)]
+#[OA\Server(
+    url: "http://127.0.0.1:8000",
+    description: "Local Server (127.0.0.1:8000)"
 )]
 #[OA\SecurityScheme(
     securityScheme: "bearerAuth",
