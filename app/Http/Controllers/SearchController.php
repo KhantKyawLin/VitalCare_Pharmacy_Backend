@@ -5,12 +5,21 @@ namespace App\Http\Controllers;
 use App\Models\Product;
 use App\Models\HealthTip;
 use Illuminate\Http\Request;
+use OpenApi\Attributes as OA;
 
 class SearchController extends Controller
 {
-    /**
-     * Unified Global Search (Products & Health Tips)
-     */
+    #[OA\Get(
+        path: '/api/search',
+        summary: 'Global autocomplete search across medicines, categories, and health tips',
+        tags: ['Public Utilities'],
+        parameters: [
+            new OA\Parameter(name: 'q', in: 'query', required: true, schema: new OA\Schema(type: 'string', example: 'paracetamol'))
+        ],
+        responses: [
+            new OA\Response(response: 200, description: 'Matching products and health tips')
+        ]
+    )]
     public function search(Request $request)
     {
         $query = $request->get('q', '');

@@ -12,12 +12,24 @@ use App\Models\ActivityLog;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
+use OpenApi\Attributes as OA;
 
 class AdminInventoryController extends Controller
 {
-    /**
-     * Purchase history.
-     */
+    #[OA\Get(
+        path: '/api/admin/purchases',
+        summary: 'List purchase orders and stock-in history with summary statistics',
+        tags: ['Admin Inventory'],
+        security: [['bearerAuth' => []]],
+        parameters: [
+            new OA\Parameter(name: 'per_page', in: 'query', required: false, schema: new OA\Schema(type: 'integer', example: 15)),
+            new OA\Parameter(name: 'page', in: 'query', required: false, schema: new OA\Schema(type: 'integer', example: 1)),
+        ],
+        responses: [
+            new OA\Response(response: 200, description: 'Paginated purchases and total monthly spending stats'),
+            new OA\Response(response: 401, description: 'Unauthenticated')
+        ]
+    )]
     public function purchaseIndex(Request $request)
     {
         $query = Purchase::with(['supplier', 'user', 'purchaseProducts.productMovement.product']);
@@ -49,9 +61,43 @@ class AdminInventoryController extends Controller
         ]);
     }
 
-    /**
-     * Create a purchase (stock-in).
-     */
+    #[OA\Post(
+        path: '/api/admin/purchases',
+        summary: 'Create a new stock-in purchase with batch numbers & expiry dates',
+        tags: ['Admin Inventory'],
+        security: [['bearerAuth' => []]],
+        requestBody: new OA\RequestBody(
+            required: true,
+            content: new OA\JsonContent(
+                required: ['supplier_id', 'purchase_date', 'items'],
+                properties: [
+                    new OA\Property(property: 'supplier_id', type: 'integer', example: 1),
+                    new OA\Property(property: 'purchase_date', type: 'string', format: 'date', example: '2026-09-20'),
+                    new OA\Property(
+                        property: 'items',
+                        type: 'array',
+                        items: new OA\Items(
+                            type: 'object',
+                            required: ['product_id', 'quantity', 'purchase_price', 'sale_price', 'expired_date', 'batch_number'],
+                            properties: [
+                                new OA\Property(property: 'product_id', type: 'integer', example: 1),
+                                new OA\Property(property: 'quantity', type: 'integer', example: 100),
+                                new OA\Property(property: 'purchase_price', type: 'number', example: 8.50),
+                                new OA\Property(property: 'sale_price', type: 'number', example: 12.00),
+                                new OA\Property(property: 'expired_date', type: 'string', format: 'date', example: '2027-12-31'),
+                                new OA\Property(property: 'manufactured_date', type: 'string', format: 'date', example: '2025-01-15'),
+                                new OA\Property(property: 'batch_number', type: 'string', example: 'BATCH-2026-09A'),
+                            ]
+                        )
+                    )
+                ]
+            )
+        ),
+        responses: [
+            new OA\Response(response: 201, description: 'Purchase order and inventory movements created'),
+            new OA\Response(response: 422, description: 'Validation error')
+        ]
+    )]
     public function purchaseStore(Request $request)
     {
         $validator = Validator::make($request->all(), [
@@ -122,9 +168,19 @@ class AdminInventoryController extends Controller
         }
     }
 
-    /**
-     * Purchase details.
-     */
+    #[OA\Get(
+        path: '/api/admin/purchases/{id}',
+        summary: 'Get purchase order details and line items',
+        tags: ['Admin Inventory'],
+        security: [['bearerAuth' => []]],
+        parameters: [
+            new OA\Parameter(name: 'id', in: 'path', required: true, schema: new OA\Schema(type: 'integer', example: 1))
+        ],
+        responses: [
+            new OA\Response(response: 200, description: 'Purchase order details'),
+            new OA\Response(response: 404, description: 'Purchase order not found')
+        ]
+    )]
     public function purchaseShow($id)
     {
         return response()->json(
@@ -132,9 +188,16 @@ class AdminInventoryController extends Controller
         );
     }
 
-    /**
-     * Low stock alerts.
-     */
+    #[OA\Get(
+        path: '/api/admin/inventory/low-stock',
+        summary: 'Get low-stock products with severity breakdown (critical, warning, notice)',
+        tags: ['Admin Inventory'],
+        security: [['bearerAuth' => []]],
+        responses: [
+            new OA\Response(response: 200, description: 'Low stock items and risk counts'),
+            new OA\Response(response: 401, description: 'Unauthenticated')
+        ]
+    )]
     public function lowStock()
     {
         $products = Product::with(['unit', 'category', 'movements' => function($q) {
@@ -209,9 +272,16 @@ class AdminInventoryController extends Controller
         ]);
     }
 
-    /**
-     * Items expiring soon (within 30 days).
-     */
+    #[OA\Get(
+        path: '/api/admin/inventory/expiring',
+        summary: 'List batches expiring within next 30 days',
+        tags: ['Admin Inventory'],
+        security: [['bearerAuth' => []]],
+        responses: [
+            new OA\Response(response: 200, description: 'List of expiring batches with remaining stock'),
+            new OA\Response(response: 401, description: 'Unauthenticated')
+        ]
+    )]
     public function expiringSoon()
     {
         $movements = ProductMovement::with(['product.category', 'product.unit'])
@@ -223,9 +293,28 @@ class AdminInventoryController extends Controller
         return response()->json($movements);
     }
 
-    /**
-     * Inventory adjustment.
-     */
+    #[OA\Post(
+        path: '/api/admin/inventory/adjustments',
+        summary: 'Log an inventory count adjustment (damaged, lost, expired, counting_error)',
+        tags: ['Admin Inventory'],
+        security: [['bearerAuth' => []]],
+        requestBody: new OA\RequestBody(
+            required: true,
+            content: new OA\JsonContent(
+                required: ['product_id', 'adjustment', 'reason', 'notes'],
+                properties: [
+                    new OA\Property(property: 'product_id', type: 'integer', example: 1),
+                    new OA\Property(property: 'adjustment', type: 'integer', example: -5, description: 'Positive to add stock, negative to deduct stock'),
+                    new OA\Property(property: 'reason', type: 'string', enum: ['damaged', 'lost', 'expired', 'counting_error', 'other'], example: 'damaged'),
+                    new OA\Property(property: 'notes', type: 'string', example: 'Dropped carton during shelf restocking'),
+                ]
+            )
+        ),
+        responses: [
+            new OA\Response(response: 201, description: 'Inventory adjustment recorded'),
+            new OA\Response(response: 422, description: 'Validation error')
+        ]
+    )]
     public function adjustment(Request $request)
     {
         $validator = Validator::make($request->all(), [

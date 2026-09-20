@@ -11,12 +11,20 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 use Carbon\Carbon;
+use OpenApi\Attributes as OA;
 
 class AdminExpiredItemController extends Controller
 {
-    /**
-     * Get currently expired items with stock.
-     */
+    #[OA\Get(
+        path: '/api/admin/inventory/expired-items',
+        summary: 'Get currently expired batches with financial value at risk',
+        tags: ['Admin Inventory'],
+        security: [['bearerAuth' => []]],
+        responses: [
+            new OA\Response(response: 200, description: 'Expired items list and monthly loss stats'),
+            new OA\Response(response: 401, description: 'Unauthenticated')
+        ]
+    )]
     public function expired()
     {
         $movements = ProductMovement::with(['product.category', 'product.unit', 'purchaseProduct.purchase.supplier'])
@@ -56,9 +64,19 @@ class AdminExpiredItemController extends Controller
         ]);
     }
 
-    /**
-     * Get items expiring soon (configurable days).
-     */
+    #[OA\Get(
+        path: '/api/admin/inventory/expiring-soon-configured',
+        summary: 'Get batches expiring within a customizable day range',
+        tags: ['Admin Inventory'],
+        security: [['bearerAuth' => []]],
+        parameters: [
+            new OA\Parameter(name: 'days', in: 'query', required: false, schema: new OA\Schema(type: 'integer', default: 30, example: 60))
+        ],
+        responses: [
+            new OA\Response(response: 200, description: 'List of expiring batches'),
+            new OA\Response(response: 401, description: 'Unauthenticated')
+        ]
+    )]
     public function expiringSoon(Request $request)
     {
         $days = $request->query('days', 30); // Default to 30 days
@@ -78,9 +96,26 @@ class AdminExpiredItemController extends Controller
         ]);
     }
 
-    /**
-     * Dispose of selected expired items.
-     */
+    #[OA\Post(
+        path: '/api/admin/inventory/expired-items/dispose',
+        summary: 'Dispose or return expired batches to supplier',
+        tags: ['Admin Inventory'],
+        security: [['bearerAuth' => []]],
+        requestBody: new OA\RequestBody(
+            required: true,
+            content: new OA\JsonContent(
+                required: ['movement_ids', 'reason'],
+                properties: [
+                    new OA\Property(property: 'movement_ids', type: 'array', items: new OA\Items(type: 'integer', example: 10)),
+                    new OA\Property(property: 'reason', type: 'string', enum: ['expired', 'returned_to_supplier'], example: 'expired'),
+                ]
+            )
+        ),
+        responses: [
+            new OA\Response(response: 200, description: 'Items disposed and written off'),
+            new OA\Response(response: 422, description: 'Validation error')
+        ]
+    )]
     public function dispose(Request $request)
     {
         $validator = Validator::make($request->all(), [
@@ -149,9 +184,16 @@ class AdminExpiredItemController extends Controller
         }
     }
 
-    /**
-     * Get disposal records.
-     */
+    #[OA\Get(
+        path: '/api/admin/inventory/disposals',
+        summary: 'List history of expired/returned disposal write-offs',
+        tags: ['Admin Inventory'],
+        security: [['bearerAuth' => []]],
+        responses: [
+            new OA\Response(response: 200, description: 'List of disposal logs'),
+            new OA\Response(response: 401, description: 'Unauthenticated')
+        ]
+    )]
     public function disposals()
     {
         $disposals = InventoryAdjustment::with(['product.category', 'product.unit', 'adjuster', 'productMovement.purchaseProduct.purchase.supplier'])

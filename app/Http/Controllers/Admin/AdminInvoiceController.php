@@ -8,12 +8,24 @@ use App\Models\SiteSetting;
 use Illuminate\Http\Request;
 use Barryvdh\DomPDF\Facade\Pdf;
 
+use OpenApi\Attributes as OA;
+
 class AdminInvoiceController extends Controller
 {
-    /**
-     * Generate and stream/download a professional PDF invoice.
-     * Note: Requires barryvdh/laravel-dompdf package.
-     */
+    #[OA\Get(
+        path: '/api/auth/orders/{id}/pdf',
+        summary: 'Download/stream PDF invoice for an order',
+        tags: ['Orders (Customer)'],
+        security: [['bearerAuth' => []]],
+        parameters: [
+            new OA\Parameter(name: 'id', in: 'path', required: true, schema: new OA\Schema(type: 'integer', example: 1))
+        ],
+        responses: [
+            new OA\Response(response: 200, description: 'PDF stream file', content: new OA\MediaType(mediaType: 'application/pdf')),
+            new OA\Response(response: 403, description: 'Unauthorized access to invoice'),
+            new OA\Response(response: 404, description: 'Order not found')
+        ]
+    )]
     public function generatePDF($id)
     {
         $user = auth()->user();

@@ -61,6 +61,14 @@ class ProductController extends Controller
         return response()->json($products);
     }
 
+    #[OA\Get(
+        path: '/api/products/top-sellers',
+        summary: 'Get top 10 best-selling published medicines for store homepage',
+        tags: ['Products (Catalog)'],
+        responses: [
+            new OA\Response(response: 200, description: 'List of top selling products')
+        ]
+    )]
     public function topSellers()
     {
         $products = Product::with(['category', 'pictures', 'unit', 'promotions', 'latestMovement'])
@@ -74,6 +82,14 @@ class ProductController extends Controller
         return response()->json($products);
     }
 
+    #[OA\Get(
+        path: '/api/products/special-offers',
+        summary: 'Get active discount and promotional medicines for storefront banner',
+        tags: ['Products (Catalog)'],
+        responses: [
+            new OA\Response(response: 200, description: 'List of discounted products with active promotions')
+        ]
+    )]
     public function specialOffers()
     {
         $products = Product::with(['category', 'pictures', 'unit', 'promotions', 'latestMovement'])
@@ -127,6 +143,14 @@ class ProductController extends Controller
         ]);
     }
 
+    #[OA\Get(
+        path: '/api/categories',
+        summary: 'List medicine categories for public storefront navigation',
+        tags: ['Products (Catalog)'],
+        responses: [
+            new OA\Response(response: 200, description: 'List of all categories')
+        ]
+    )]
     public function categories()
     {
         $categories = Category::all();

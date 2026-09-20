@@ -12,12 +12,25 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
+use OpenApi\Attributes as OA;
 
 class AdminUserController extends Controller
 {
-    /**
-     * List registered users.
-     */
+    #[OA\Get(
+        path: '/api/admin/users',
+        summary: 'List users and customer accounts (Admin only)',
+        tags: ['Admin Users & Staff'],
+        security: [['bearerAuth' => []]],
+        parameters: [
+            new OA\Parameter(name: 'role', in: 'query', required: false, schema: new OA\Schema(type: 'string', enum: ['user', 'staff', 'pharmacist', 'admin'])),
+            new OA\Parameter(name: 'search', in: 'query', required: false, schema: new OA\Schema(type: 'string')),
+            new OA\Parameter(name: 'per_page', in: 'query', required: false, schema: new OA\Schema(type: 'integer', example: 15)),
+        ],
+        responses: [
+            new OA\Response(response: 200, description: 'Paginated user list with pending password resets count'),
+            new OA\Response(response: 401, description: 'Unauthenticated')
+        ]
+    )]
     public function index(Request $request)
     {
         $query = User::withCount(['passwordResetRequests as pending_resets_count' => function ($query) {
@@ -38,18 +51,39 @@ class AdminUserController extends Controller
         return response()->json($query->latest()->paginate($request->get('per_page', 15)));
     }
 
-    /**
-     * View user details (read-only).
-     */
+    #[OA\Get(
+        path: '/api/admin/users/{id}',
+        summary: 'Get customer/user details with past orders and wishlists',
+        tags: ['Admin Users & Staff'],
+        security: [['bearerAuth' => []]],
+        parameters: [
+            new OA\Parameter(name: 'id', in: 'path', required: true, schema: new OA\Schema(type: 'integer', example: 1))
+        ],
+        responses: [
+            new OA\Response(response: 200, description: 'User profile with related records'),
+            new OA\Response(response: 404, description: 'User not found')
+        ]
+    )]
     public function show($id)
     {
         $user = User::with(['orders', 'wishlists'])->findOrFail($id);
         return response()->json($user);
     }
 
-    /**
-     * Delete a user (soft delete). Admin can delete but NOT edit.
-     */
+    #[OA\Delete(
+        path: '/api/admin/users/{id}',
+        summary: 'Delete user account (Admin only - cannot delete admin)',
+        tags: ['Admin Users & Staff'],
+        security: [['bearerAuth' => []]],
+        parameters: [
+            new OA\Parameter(name: 'id', in: 'path', required: true, schema: new OA\Schema(type: 'integer', example: 1))
+        ],
+        responses: [
+            new OA\Response(response: 200, description: 'User deleted'),
+            new OA\Response(response: 403, description: 'Cannot delete admin accounts'),
+            new OA\Response(response: 404, description: 'User not found')
+        ]
+    )]
     public function destroy($id)
     {
         $user = User::findOrFail($id);
@@ -65,9 +99,30 @@ class AdminUserController extends Controller
         return response()->json(['message' => 'User deleted']);
     }
 
-    /**
-     * Create staff account.
-     */
+    #[OA\Post(
+        path: '/api/admin/staff',
+        summary: 'Create a new staff or pharmacist account with temporary password',
+        tags: ['Admin Users & Staff'],
+        security: [['bearerAuth' => []]],
+        requestBody: new OA\RequestBody(
+            required: true,
+            content: new OA\JsonContent(
+                required: ['name', 'email', 'role'],
+                properties: [
+                    new OA\Property(property: 'name', type: 'string', example: 'Daw Khin'),
+                    new OA\Property(property: 'email', type: 'string', format: 'email', example: 'staff1@vitalcare.com'),
+                    new OA\Property(property: 'role', type: 'string', enum: ['staff', 'pharmacist'], example: 'pharmacist'),
+                    new OA\Property(property: 'role_id', type: 'integer', example: 2),
+                    new OA\Property(property: 'phone', type: 'string', example: '+95912345678'),
+                    new OA\Property(property: 'gender', type: 'string', enum: ['male', 'female', 'others'], example: 'female'),
+                ]
+            )
+        ),
+        responses: [
+            new OA\Response(response: 201, description: 'Staff created with generated temporary password'),
+            new OA\Response(response: 422, description: 'Validation error')
+        ]
+    )]
     public function createStaff(Request $request)
     {
         $validator = Validator::make($request->all(), [
@@ -106,9 +161,31 @@ class AdminUserController extends Controller
         ], 201);
     }
 
-    /**
-     * Update staff.
-     */
+    #[OA\Put(
+        path: '/api/admin/staff/{id}',
+        summary: 'Update staff or pharmacist account info or role',
+        tags: ['Admin Users & Staff'],
+        security: [['bearerAuth' => []]],
+        parameters: [
+            new OA\Parameter(name: 'id', in: 'path', required: true, schema: new OA\Schema(type: 'integer', example: 1))
+        ],
+        requestBody: new OA\RequestBody(
+            required: true,
+            content: new OA\JsonContent(
+                properties: [
+                    new OA\Property(property: 'name', type: 'string', example: 'Daw Khin'),
+                    new OA\Property(property: 'role', type: 'string', enum: ['staff', 'pharmacist'], example: 'pharmacist'),
+                    new OA\Property(property: 'role_id', type: 'integer', example: 2),
+                    new OA\Property(property: 'phone', type: 'string', example: '+95912345678'),
+                ]
+            )
+        ),
+        responses: [
+            new OA\Response(response: 200, description: 'Staff updated'),
+            new OA\Response(response: 422, description: 'Validation error'),
+            new OA\Response(response: 404, description: 'Staff not found')
+        ]
+    )]
     public function updateStaff(Request $request, $id)
     {
         $staff = User::whereIn('role', ['staff', 'pharmacist'])->findOrFail($id);
@@ -127,9 +204,19 @@ class AdminUserController extends Controller
         return response()->json(['message' => 'Staff updated', 'user' => $staff]);
     }
 
-    /**
-     * Reset password — generates random password and (will) email it.
-     */
+    #[OA\Post(
+        path: '/api/admin/users/{id}/reset-password',
+        summary: 'Manually reset a user password and flag must_change_password',
+        tags: ['Admin Users & Staff'],
+        security: [['bearerAuth' => []]],
+        parameters: [
+            new OA\Parameter(name: 'id', in: 'path', required: true, schema: new OA\Schema(type: 'integer', example: 1))
+        ],
+        responses: [
+            new OA\Response(response: 200, description: 'Password reset with newly generated password'),
+            new OA\Response(response: 404, description: 'User not found')
+        ]
+    )]
     public function resetPassword($id)
     {
         $user = User::findOrFail($id);
@@ -156,9 +243,15 @@ class AdminUserController extends Controller
         ]);
     }
 
-    /**
-     * List pending password reset requests.
-     */
+    #[OA\Get(
+        path: '/api/admin/password-reset-requests',
+        summary: 'List pending user password reset requests',
+        tags: ['Admin Users & Staff'],
+        security: [['bearerAuth' => []]],
+        responses: [
+            new OA\Response(response: 200, description: 'List of pending password reset requests')
+        ]
+    )]
     public function passwordResetRequests()
     {
         return response()->json(

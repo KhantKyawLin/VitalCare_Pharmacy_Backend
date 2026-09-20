@@ -8,9 +8,20 @@ use App\Models\Product;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
+use OpenApi\Attributes as OA;
 
 class AdminPromotionController extends Controller
 {
+    #[OA\Get(
+        path: '/api/admin/promotions',
+        summary: 'List all promotional campaigns and discounts',
+        tags: ['Admin Promotions'],
+        security: [['bearerAuth' => []]],
+        responses: [
+            new OA\Response(response: 200, description: 'List of promotions with attached products count'),
+            new OA\Response(response: 401, description: 'Unauthenticated')
+        ]
+    )]
     public function index()
     {
         $promotions = Promotion::withCount('products')->orderBy('created_at', 'desc')->get();
@@ -20,6 +31,16 @@ class AdminPromotionController extends Controller
         ]);
     }
 
+    #[OA\Get(
+        path: '/api/admin/promotions/products',
+        summary: 'Get products eligible for attaching to promotional campaigns',
+        tags: ['Admin Promotions'],
+        security: [['bearerAuth' => []]],
+        responses: [
+            new OA\Response(response: 200, description: 'Products list with active promotion overlap check'),
+            new OA\Response(response: 401, description: 'Unauthenticated')
+        ]
+    )]
     public function products()
     {
         // For the product selection table when creating item-scoped promotions
@@ -54,6 +75,34 @@ class AdminPromotionController extends Controller
         ]);
     }
 
+    #[OA\Post(
+        path: '/api/admin/promotions',
+        summary: 'Create a new promotion rule (percentage, fixed, BOGO, gift)',
+        tags: ['Admin Promotions'],
+        security: [['bearerAuth' => []]],
+        requestBody: new OA\RequestBody(
+            required: true,
+            content: new OA\JsonContent(
+                required: ['title', 'type', 'promotion_scope', 'min_qty_requirement', 'start_date', 'end_date'],
+                properties: [
+                    new OA\Property(property: 'title', type: 'string', example: 'Monsoon Mega Discount'),
+                    new OA\Property(property: 'type', type: 'string', enum: ['percentage', 'fixed_amount', 'cashback', 'buy_one_get_one', 'buy_one_get_gift'], example: 'percentage'),
+                    new OA\Property(property: 'discount_value', type: 'number', example: 15),
+                    new OA\Property(property: 'promotion_scope', type: 'string', enum: ['item', 'order'], example: 'item'),
+                    new OA\Property(property: 'min_qty_requirement', type: 'integer', example: 1),
+                    new OA\Property(property: 'min_order_value', type: 'number', example: 0),
+                    new OA\Property(property: 'start_date', type: 'string', format: 'date', example: '2026-09-01'),
+                    new OA\Property(property: 'end_date', type: 'string', format: 'date', example: '2026-10-31'),
+                    new OA\Property(property: 'is_active', type: 'boolean', example: true),
+                    new OA\Property(property: 'product_ids', type: 'array', items: new OA\Items(type: 'integer', example: 1)),
+                ]
+            )
+        ),
+        responses: [
+            new OA\Response(response: 201, description: 'Promotion created'),
+            new OA\Response(response: 422, description: 'Validation error')
+        ]
+    )]
     public function store(Request $request)
     {
         $validator = Validator::make($request->all(), [
@@ -109,6 +158,19 @@ class AdminPromotionController extends Controller
         }
     }
 
+    #[OA\Get(
+        path: '/api/admin/promotions/{id}',
+        summary: 'Get promotion details with attached products',
+        tags: ['Admin Promotions'],
+        security: [['bearerAuth' => []]],
+        parameters: [
+            new OA\Parameter(name: 'id', in: 'path', required: true, schema: new OA\Schema(type: 'integer', example: 1))
+        ],
+        responses: [
+            new OA\Response(response: 200, description: 'Promotion details'),
+            new OA\Response(response: 404, description: 'Promotion not found')
+        ]
+    )]
     public function show($id)
     {
         $promotion = Promotion::with('products')->findOrFail($id);
@@ -118,6 +180,38 @@ class AdminPromotionController extends Controller
         ]);
     }
 
+    #[OA\Put(
+        path: '/api/admin/promotions/{id}',
+        summary: 'Update promotion settings and attached products',
+        tags: ['Admin Promotions'],
+        security: [['bearerAuth' => []]],
+        parameters: [
+            new OA\Parameter(name: 'id', in: 'path', required: true, schema: new OA\Schema(type: 'integer', example: 1))
+        ],
+        requestBody: new OA\RequestBody(
+            required: true,
+            content: new OA\JsonContent(
+                required: ['title', 'type', 'promotion_scope', 'min_qty_requirement', 'start_date', 'end_date'],
+                properties: [
+                    new OA\Property(property: 'title', type: 'string', example: 'Updated Campaign'),
+                    new OA\Property(property: 'type', type: 'string', enum: ['percentage', 'fixed_amount', 'cashback', 'buy_one_get_one', 'buy_one_get_gift'], example: 'percentage'),
+                    new OA\Property(property: 'discount_value', type: 'number', example: 20),
+                    new OA\Property(property: 'promotion_scope', type: 'string', enum: ['item', 'order'], example: 'item'),
+                    new OA\Property(property: 'min_qty_requirement', type: 'integer', example: 1),
+                    new OA\Property(property: 'min_order_value', type: 'number', example: 0),
+                    new OA\Property(property: 'start_date', type: 'string', format: 'date', example: '2026-09-01'),
+                    new OA\Property(property: 'end_date', type: 'string', format: 'date', example: '2026-10-31'),
+                    new OA\Property(property: 'is_active', type: 'boolean', example: true),
+                    new OA\Property(property: 'product_ids', type: 'array', items: new OA\Items(type: 'integer', example: 1)),
+                ]
+            )
+        ),
+        responses: [
+            new OA\Response(response: 200, description: 'Promotion updated successfully'),
+            new OA\Response(response: 422, description: 'Validation error'),
+            new OA\Response(response: 404, description: 'Promotion not found')
+        ]
+    )]
     public function update(Request $request, $id)
     {
         $promotion = Promotion::findOrFail($id);
@@ -174,6 +268,19 @@ class AdminPromotionController extends Controller
         }
     }
 
+    #[OA\Delete(
+        path: '/api/admin/promotions/{id}',
+        summary: 'Delete promotion',
+        tags: ['Admin Promotions'],
+        security: [['bearerAuth' => []]],
+        parameters: [
+            new OA\Parameter(name: 'id', in: 'path', required: true, schema: new OA\Schema(type: 'integer', example: 1))
+        ],
+        responses: [
+            new OA\Response(response: 200, description: 'Promotion deleted successfully'),
+            new OA\Response(response: 404, description: 'Promotion not found')
+        ]
+    )]
     public function destroy($id)
     {
         try {

@@ -10,12 +10,25 @@ use App\Models\ExternalTransaction;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
+use OpenApi\Attributes as OA;
 
 class AdminReportController extends Controller
 {
-    /**
-     * Get financial summary stats for a given period.
-     */
+    #[OA\Get(
+        path: '/api/admin/reports/overview',
+        summary: 'Financial P&L summary report (Revenue, COGS, Gross/Net Profit, Recoverable Returns)',
+        tags: ['Admin Financial Reports'],
+        security: [['bearerAuth' => []]],
+        parameters: [
+            new OA\Parameter(name: 'range', in: 'query', required: false, schema: new OA\Schema(type: 'string', enum: ['today', 'yesterday', 'this_week', 'this_month', 'last_month', 'this_year', 'custom'], default: 'this_month')),
+            new OA\Parameter(name: 'start_date', in: 'query', required: false, schema: new OA\Schema(type: 'string', format: 'date')),
+            new OA\Parameter(name: 'end_date', in: 'query', required: false, schema: new OA\Schema(type: 'string', format: 'date')),
+        ],
+        responses: [
+            new OA\Response(response: 200, description: 'Summary P&L with comparison trends'),
+            new OA\Response(response: 401, description: 'Unauthenticated')
+        ]
+    )]
     public function index(Request $request)
     {
         $range = $request->get('range', 'this_month');
@@ -105,9 +118,20 @@ class AdminReportController extends Controller
         ]);
     }
 
-    /**
-     * Get chart data for sales vs profit.
-     */
+    #[OA\Get(
+        path: '/api/admin/reports/charts',
+        summary: 'Daily revenue vs profit time-series chart data',
+        tags: ['Admin Financial Reports'],
+        security: [['bearerAuth' => []]],
+        parameters: [
+            new OA\Parameter(name: 'range', in: 'query', required: false, schema: new OA\Schema(type: 'string', default: 'this_month')),
+            new OA\Parameter(name: 'start_date', in: 'query', required: false, schema: new OA\Schema(type: 'string', format: 'date')),
+            new OA\Parameter(name: 'end_date', in: 'query', required: false, schema: new OA\Schema(type: 'string', format: 'date')),
+        ],
+        responses: [
+            new OA\Response(response: 200, description: 'List of daily revenue and profit points')
+        ]
+    )]
     public function chartData(Request $request)
     {
         $range = $request->get('range', 'this_month');
@@ -128,9 +152,20 @@ class AdminReportController extends Controller
         return response()->json($results);
     }
 
-    /**
-     * Get breakdown of inventory losses.
-     */
+    #[OA\Get(
+        path: '/api/admin/reports/losses',
+        summary: 'Inventory loss breakdown categorized by reason (expired, damaged, lost)',
+        tags: ['Admin Financial Reports'],
+        security: [['bearerAuth' => []]],
+        parameters: [
+            new OA\Parameter(name: 'range', in: 'query', required: false, schema: new OA\Schema(type: 'string', default: 'this_month')),
+            new OA\Parameter(name: 'start_date', in: 'query', required: false, schema: new OA\Schema(type: 'string', format: 'date')),
+            new OA\Parameter(name: 'end_date', in: 'query', required: false, schema: new OA\Schema(type: 'string', format: 'date')),
+        ],
+        responses: [
+            new OA\Response(response: 200, description: 'Loss values grouped by category')
+        ]
+    )]
     public function lossBreakdown(Request $request)
     {
         $range = $request->get('range', 'this_month');
@@ -145,9 +180,20 @@ class AdminReportController extends Controller
         return response()->json($losses);
     }
 
-    /**
-     * Get top profitable products.
-     */
+    #[OA\Get(
+        path: '/api/admin/reports/top-profitable',
+        summary: 'Top 10 highest margin and most profitable medicines',
+        tags: ['Admin Financial Reports'],
+        security: [['bearerAuth' => []]],
+        parameters: [
+            new OA\Parameter(name: 'range', in: 'query', required: false, schema: new OA\Schema(type: 'string', default: 'this_month')),
+            new OA\Parameter(name: 'start_date', in: 'query', required: false, schema: new OA\Schema(type: 'string', format: 'date')),
+            new OA\Parameter(name: 'end_date', in: 'query', required: false, schema: new OA\Schema(type: 'string', format: 'date')),
+        ],
+        responses: [
+            new OA\Response(response: 200, description: 'Top profitable products ranked by gross profit')
+        ]
+    )]
     public function topProfitableProducts(Request $request)
     {
         $range = $request->get('range', 'this_month');
@@ -170,12 +216,22 @@ class AdminReportController extends Controller
         return response()->json($products);
     }
 
-    /**
-     * Get detailed P&L records (Unified list).
-     */
-    /**
-     * Get detailed P&L records (Unified list) with high-performance DB Unions and deferred hydration.
-     */
+    #[OA\Get(
+        path: '/api/admin/reports/detailed-ledger',
+        summary: 'Unified financial transaction ledger combining orders, write-offs, and operational expenses',
+        tags: ['Admin Financial Reports'],
+        security: [['bearerAuth' => []]],
+        parameters: [
+            new OA\Parameter(name: 'start_date', in: 'query', required: false, schema: new OA\Schema(type: 'string', format: 'date')),
+            new OA\Parameter(name: 'end_date', in: 'query', required: false, schema: new OA\Schema(type: 'string', format: 'date')),
+            new OA\Parameter(name: 'type', in: 'query', required: false, schema: new OA\Schema(type: 'string', enum: ['all', 'sales', 'losses', 'external'], default: 'all')),
+            new OA\Parameter(name: 'per_page', in: 'query', required: false, schema: new OA\Schema(type: 'integer', example: 15)),
+            new OA\Parameter(name: 'page', in: 'query', required: false, schema: new OA\Schema(type: 'integer', example: 1)),
+        ],
+        responses: [
+            new OA\Response(response: 200, description: 'Paginated unified P&L audit ledger')
+        ]
+    )]
     public function detailedProfitRecords(Request $request)
     {
         $startDate = Carbon::parse($request->get('start_date', now()->startOfMonth()->toDateString()))->startOfDay();

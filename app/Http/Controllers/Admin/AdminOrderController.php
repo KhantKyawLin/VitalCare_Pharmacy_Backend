@@ -6,9 +6,28 @@ use App\Http\Controllers\Controller;
 use App\Models\Order;
 use App\Models\ActivityLog;
 use Illuminate\Http\Request;
+use OpenApi\Attributes as OA;
 
 class AdminOrderController extends Controller
 {
+    #[OA\Get(
+        path: '/api/admin/orders',
+        summary: 'List customer and POS orders with status filtering (Admin/Staff)',
+        tags: ['Admin Orders'],
+        security: [['bearerAuth' => []]],
+        parameters: [
+            new OA\Parameter(name: 'status', in: 'query', required: false, schema: new OA\Schema(type: 'string', enum: ['pending', 'completed', 'cancelled'])),
+            new OA\Parameter(name: 'order_type', in: 'query', required: false, schema: new OA\Schema(type: 'string', enum: ['Online', 'POS'])),
+            new OA\Parameter(name: 'prescription_status', in: 'query', required: false, schema: new OA\Schema(type: 'string', enum: ['pending', 'approved', 'rejected'])),
+            new OA\Parameter(name: 'date', in: 'query', required: false, schema: new OA\Schema(type: 'string', format: 'date', example: '2026-09-20')),
+            new OA\Parameter(name: 'per_page', in: 'query', required: false, schema: new OA\Schema(type: 'integer', example: 15)),
+            new OA\Parameter(name: 'page', in: 'query', required: false, schema: new OA\Schema(type: 'integer', example: 1)),
+        ],
+        responses: [
+            new OA\Response(response: 200, description: 'Paginated order collection'),
+            new OA\Response(response: 401, description: 'Unauthenticated')
+        ]
+    )]
     public function index(Request $request)
     {
         $query = Order::with(['user', 'orderProducts.product.pictures']);
@@ -29,12 +48,50 @@ class AdminOrderController extends Controller
         return response()->json($query->latest('created_at')->paginate($request->get('per_page', 15)));
     }
 
+    #[OA\Get(
+        path: '/api/admin/orders/{id}',
+        summary: 'Get order details with items, batches and prescription image',
+        tags: ['Admin Orders'],
+        security: [['bearerAuth' => []]],
+        parameters: [
+            new OA\Parameter(name: 'id', in: 'path', required: true, schema: new OA\Schema(type: 'integer', example: 1))
+        ],
+        responses: [
+            new OA\Response(response: 200, description: 'Order details'),
+            new OA\Response(response: 404, description: 'Order not found')
+        ]
+    )]
     public function show($id)
     {
         $order = Order::with(['user', 'orderProducts.product.pictures', 'orderProducts.batches.productMovement', 'cashier'])->findOrFail($id);
         return response()->json($order);
     }
 
+    #[OA\Put(
+        path: '/api/admin/orders/{id}',
+        summary: 'Update order fulfillment, shipping or refund status',
+        tags: ['Admin Orders'],
+        security: [['bearerAuth' => []]],
+        parameters: [
+            new OA\Parameter(name: 'id', in: 'path', required: true, schema: new OA\Schema(type: 'integer', example: 1))
+        ],
+        requestBody: new OA\RequestBody(
+            required: true,
+            content: new OA\JsonContent(
+                properties: [
+                    new OA\Property(property: 'status', type: 'string', enum: ['pending', 'completed', 'cancelled'], example: 'completed'),
+                    new OA\Property(property: 'deliver_status', type: 'string', enum: ['pending', 'shipped', 'delivered', 'returned'], example: 'delivered'),
+                    new OA\Property(property: 'payment_status', type: 'string', enum: ['pending', 'paid', 'refunded'], example: 'paid'),
+                    new OA\Property(property: 'refund_reason', type: 'string', nullable: true, example: 'Customer requested cancellation')
+                ]
+            )
+        ),
+        responses: [
+            new OA\Response(response: 200, description: 'Order updated successfully'),
+            new OA\Response(response: 422, description: 'Validation error'),
+            new OA\Response(response: 404, description: 'Order not found')
+        ]
+    )]
     public function update(Request $request, $id)
     {
         $order = Order::with('orderProducts')->findOrFail($id);
@@ -100,6 +157,19 @@ class AdminOrderController extends Controller
         }
     }
 
+    #[OA\Delete(
+        path: '/api/admin/orders/{id}',
+        summary: 'Delete order record (Admin only)',
+        tags: ['Admin Orders'],
+        security: [['bearerAuth' => []]],
+        parameters: [
+            new OA\Parameter(name: 'id', in: 'path', required: true, schema: new OA\Schema(type: 'integer', example: 1))
+        ],
+        responses: [
+            new OA\Response(response: 200, description: 'Order deleted'),
+            new OA\Response(response: 404, description: 'Order not found')
+        ]
+    )]
     public function destroy($id)
     {
         $order = Order::findOrFail($id);
@@ -109,6 +179,29 @@ class AdminOrderController extends Controller
         return response()->json(['message' => 'Order deleted']);
     }
 
+    #[OA\Patch(
+        path: '/api/admin/orders/{id}/prescription',
+        summary: 'Approve or reject customer prescription upload',
+        tags: ['Admin Orders'],
+        security: [['bearerAuth' => []]],
+        parameters: [
+            new OA\Parameter(name: 'id', in: 'path', required: true, schema: new OA\Schema(type: 'integer', example: 1))
+        ],
+        requestBody: new OA\RequestBody(
+            required: true,
+            content: new OA\JsonContent(
+                required: ['prescription_status'],
+                properties: [
+                    new OA\Property(property: 'prescription_status', type: 'string', enum: ['approved', 'rejected'], example: 'approved')
+                ]
+            )
+        ),
+        responses: [
+            new OA\Response(response: 200, description: 'Prescription status updated (if rejected, prescription items cancelled & refunded)'),
+            new OA\Response(response: 422, description: 'Validation error'),
+            new OA\Response(response: 404, description: 'Order not found')
+        ]
+    )]
     public function updatePrescriptionStatus(Request $request, $id)
     {
         $order = Order::with('orderProducts.product')->findOrFail($id);

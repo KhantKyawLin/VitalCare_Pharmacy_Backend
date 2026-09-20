@@ -171,6 +171,29 @@ class AdminUnitController extends Controller
         ], 201);
     }
 
+    #[OA\Put(
+        path: '/api/admin/units/{id}',
+        summary: 'Update unit name',
+        tags: ['Units'],
+        security: [['bearerAuth' => []]],
+        parameters: [
+            new OA\Parameter(name: 'id', in: 'path', required: true, schema: new OA\Schema(type: 'integer', example: 1))
+        ],
+        requestBody: new OA\RequestBody(
+            required: true,
+            content: new OA\JsonContent(
+                required: ['name'],
+                properties: [
+                    new OA\Property(property: 'name', type: 'string', example: 'Bottle')
+                ]
+            )
+        ),
+        responses: [
+            new OA\Response(response: 200, description: 'Unit updated'),
+            new OA\Response(response: 422, description: 'Validation error or unit name already present'),
+            new OA\Response(response: 404, description: 'Unit not found')
+        ]
+    )]
     public function update(Request $request, $id)
     {
         $unit = Unit::findOrFail($id);
@@ -194,6 +217,19 @@ class AdminUnitController extends Controller
         return response()->json(['message' => 'Unit updated', 'unit' => $unit]);
     }
 
+    #[OA\Delete(
+        path: '/api/admin/units/{id}',
+        summary: 'Delete unit',
+        tags: ['Units'],
+        security: [['bearerAuth' => []]],
+        parameters: [
+            new OA\Parameter(name: 'id', in: 'path', required: true, schema: new OA\Schema(type: 'integer', example: 1))
+        ],
+        responses: [
+            new OA\Response(response: 200, description: 'Unit deleted'),
+            new OA\Response(response: 404, description: 'Unit not found')
+        ]
+    )]
     public function destroy($id)
     {
         $unit = Unit::findOrFail($id);

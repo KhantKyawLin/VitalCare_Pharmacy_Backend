@@ -6,12 +6,20 @@ use App\Http\Controllers\Controller;
 use App\Models\Product;
 use Illuminate\Http\Request;
 use Carbon\Carbon;
+use OpenApi\Attributes as OA;
 
 class AdminNotificationController extends Controller
 {
-    /**
-     * Get alerts for low stock and expiring items.
-     */
+    #[OA\Get(
+        path: '/api/admin/notifications/alerts',
+        summary: 'Get consolidated admin header notification alerts (low stock, expiring, contact messages, new orders)',
+        tags: ['Admin Dashboard & Settings'],
+        security: [['bearerAuth' => []]],
+        responses: [
+            new OA\Response(response: 200, description: 'Alert list with notification count'),
+            new OA\Response(response: 401, description: 'Unauthenticated')
+        ]
+    )]
     public function getAlerts()
     {
         // 1. Low Stock Alerts

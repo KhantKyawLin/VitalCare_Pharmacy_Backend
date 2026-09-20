@@ -9,9 +9,20 @@ use App\Models\Cart;
 use App\Models\Product;
 use App\Models\ProductMovement;
 use Illuminate\Support\Facades\DB;
+use OpenApi\Attributes as OA;
 
 class OrderController extends Controller
 {
+    #[OA\Get(
+        path: '/api/auth/orders',
+        summary: 'List current user orders',
+        tags: ['Orders (Customer)'],
+        security: [['bearerAuth' => []]],
+        responses: [
+            new OA\Response(response: 200, description: 'List of past orders with products'),
+            new OA\Response(response: 401, description: 'Unauthenticated')
+        ]
+    )]
     public function index()
     {
         $user = auth('api')->user();
@@ -27,6 +38,20 @@ class OrderController extends Controller
         return response()->json($orders);
     }
 
+    #[OA\Get(
+        path: '/api/auth/orders/{id}',
+        summary: 'Get order details by ID',
+        tags: ['Orders (Customer)'],
+        security: [['bearerAuth' => []]],
+        parameters: [
+            new OA\Parameter(name: 'id', in: 'path', required: true, schema: new OA\Schema(type: 'integer', example: 1))
+        ],
+        responses: [
+            new OA\Response(response: 200, description: 'Order details with order products'),
+            new OA\Response(response: 404, description: 'Order not found'),
+            new OA\Response(response: 401, description: 'Unauthenticated')
+        ]
+    )]
     public function show($id)
     {
         $user = auth('api')->user();
@@ -46,6 +71,34 @@ class OrderController extends Controller
         return response()->json($order);
     }
 
+    #[OA\Post(
+        path: '/api/auth/checkout',
+        summary: 'Checkout cart and place order',
+        tags: ['Orders (Customer)'],
+        security: [['bearerAuth' => []]],
+        requestBody: new OA\RequestBody(
+            required: true,
+            content: new OA\MediaType(
+                mediaType: 'multipart/form-data',
+                schema: new OA\Schema(
+                    required: ['delivery_address', 'contact_phone', 'payment_method'],
+                    properties: [
+                        new OA\Property(property: 'delivery_address', type: 'string', example: '123 Main St, Yangon'),
+                        new OA\Property(property: 'contact_phone', type: 'string', example: '+959123456789'),
+                        new OA\Property(property: 'payment_method', type: 'string', enum: ['Cash', 'Online'], example: 'Cash'),
+                        new OA\Property(property: 'payment_proof', type: 'string', format: 'binary', description: 'Required if Online payment'),
+                        new OA\Property(property: 'prescription_image', type: 'string', format: 'binary', description: 'Required if prescription drugs in cart'),
+                    ]
+                )
+            )
+        ),
+        responses: [
+            new OA\Response(response: 201, description: 'Order placed successfully'),
+            new OA\Response(response: 400, description: 'Cart empty or missing prescription image'),
+            new OA\Response(response: 422, description: 'Validation error'),
+            new OA\Response(response: 401, description: 'Unauthenticated')
+        ]
+    )]
     public function checkout(Request $request, \App\Actions\CheckoutAction $checkoutAction)
     {
         $user = auth('api')->user();
@@ -136,6 +189,20 @@ class OrderController extends Controller
         }
     }
 
+    #[OA\Post(
+        path: '/api/auth/orders/{id}/reorder',
+        summary: 'Re-add all non-gift items from a previous order into the current cart',
+        tags: ['Orders (Customer)'],
+        security: [['bearerAuth' => []]],
+        parameters: [
+            new OA\Parameter(name: 'id', in: 'path', required: true, schema: new OA\Schema(type: 'integer', example: 1))
+        ],
+        responses: [
+            new OA\Response(response: 200, description: 'Items successfully re-added to cart'),
+            new OA\Response(response: 404, description: 'Order not found'),
+            new OA\Response(response: 401, description: 'Unauthenticated')
+        ]
+    )]
     public function reorder($id)
     {
         $user = auth('api')->user();

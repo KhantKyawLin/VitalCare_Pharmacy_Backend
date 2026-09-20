@@ -61,9 +61,39 @@ class AuthController extends Controller
         return $this->respondWithToken($token);
     }
 
-    /**
-     * Register a new user
-     */
+    #[OA\Post(
+        path: '/api/auth/register',
+        summary: 'Register a new customer account',
+        tags: ['Authentication'],
+        requestBody: new OA\RequestBody(
+            required: true,
+            content: new OA\JsonContent(
+                required: ['name', 'email', 'password', 'gender', 'phone', 'address'],
+                properties: [
+                    new OA\Property(property: 'name', type: 'string', example: 'John Doe'),
+                    new OA\Property(property: 'email', type: 'string', format: 'email', example: 'john@example.com'),
+                    new OA\Property(property: 'password', type: 'string', format: 'password', example: 'Secret123!'),
+                    new OA\Property(property: 'gender', type: 'string', enum: ['male', 'female', 'others'], example: 'male'),
+                    new OA\Property(property: 'phone', type: 'string', example: '+95912345678'),
+                    new OA\Property(property: 'address', type: 'string', example: '45 Bogyoke Rd, Yangon'),
+                ]
+            )
+        ),
+        responses: [
+            new OA\Response(
+                response: 200,
+                description: 'User registered and authenticated',
+                content: new OA\JsonContent(
+                    properties: [
+                        new OA\Property(property: 'access_token', type: 'string', example: 'eyJhbGciOi...'),
+                        new OA\Property(property: 'token_type', type: 'string', example: 'bearer'),
+                        new OA\Property(property: 'expires_in', type: 'integer', example: 3600),
+                    ]
+                )
+            ),
+            new OA\Response(response: 400, description: 'Validation error (e.g. email already exists)')
+        ]
+    )]
     public function register(Request $request)
     {
         $validator = Validator::make($request->all(), [
@@ -135,26 +165,76 @@ class AuthController extends Controller
         return response()->json($data);
     }
 
-    /**
-     * Logout
-     */
+    #[OA\Post(
+        path: '/api/auth/logout',
+        summary: 'Log out current user and invalidate token',
+        tags: ['Authentication'],
+        security: [['bearerAuth' => []]],
+        responses: [
+            new OA\Response(response: 200, description: 'Successfully logged out'),
+            new OA\Response(response: 401, description: 'Unauthenticated')
+        ]
+    )]
     public function logout()
     {
         auth('api')->logout();
         return response()->json(['message' => 'Successfully logged out']);
     }
 
-    /**
-     * Refresh token
-     */
+    #[OA\Post(
+        path: '/api/auth/refresh',
+        summary: 'Refresh expired or expiring JWT token',
+        tags: ['Authentication'],
+        security: [['bearerAuth' => []]],
+        responses: [
+            new OA\Response(
+                response: 200,
+                description: 'New token issued',
+                content: new OA\JsonContent(
+                    properties: [
+                        new OA\Property(property: 'access_token', type: 'string', example: 'eyJhbGciOi...'),
+                        new OA\Property(property: 'token_type', type: 'string', example: 'bearer'),
+                        new OA\Property(property: 'expires_in', type: 'integer', example: 3600),
+                    ]
+                )
+            ),
+            new OA\Response(response: 401, description: 'Unauthenticated or invalid token')
+        ]
+    )]
     public function refresh()
     {
         return $this->respondWithToken(auth('api')->refresh());
     }
 
-    /**
-     * Update own profile.
-     */
+    #[OA\Post(
+        path: '/api/auth/profile',
+        summary: 'Update current user profile information and avatar',
+        tags: ['Authentication'],
+        security: [['bearerAuth' => []]],
+        requestBody: new OA\RequestBody(
+            required: false,
+            content: new OA\MediaType(
+                mediaType: 'multipart/form-data',
+                schema: new OA\Schema(
+                    properties: [
+                        new OA\Property(property: 'name', type: 'string', example: 'John Doe'),
+                        new OA\Property(property: 'phone', type: 'string', example: '+95912345678'),
+                        new OA\Property(property: 'address', type: 'string', example: '45 Bogyoke Rd, Yangon'),
+                        new OA\Property(property: 'gender', type: 'string', enum: ['male', 'female', 'others'], example: 'male'),
+                        new OA\Property(property: 'current_password', type: 'string', format: 'password', description: 'Required if changing password'),
+                        new OA\Property(property: 'password', type: 'string', format: 'password'),
+                        new OA\Property(property: 'password_confirmation', type: 'string', format: 'password'),
+                        new OA\Property(property: 'profile_image', type: 'string', format: 'binary'),
+                    ]
+                )
+            )
+        ),
+        responses: [
+            new OA\Response(response: 200, description: 'Profile updated successfully'),
+            new OA\Response(response: 422, description: 'Validation error'),
+            new OA\Response(response: 401, description: 'Unauthenticated')
+        ]
+    )]
     public function updateProfile(Request $request)
     {
         $user = auth('api')->user();
@@ -240,9 +320,27 @@ class AuthController extends Controller
         ]);
     }
 
-    /**
-     * Force user to change their password (used after manual admin reset).
-     */
+    #[OA\Post(
+        path: '/api/auth/force-change-password',
+        summary: 'Force change password on temporary admin reset',
+        tags: ['Authentication'],
+        security: [['bearerAuth' => []]],
+        requestBody: new OA\RequestBody(
+            required: true,
+            content: new OA\JsonContent(
+                required: ['password', 'password_confirmation'],
+                properties: [
+                    new OA\Property(property: 'password', type: 'string', format: 'password', example: 'NewSecurePass123!'),
+                    new OA\Property(property: 'password_confirmation', type: 'string', format: 'password', example: 'NewSecurePass123!'),
+                ]
+            )
+        ),
+        responses: [
+            new OA\Response(response: 200, description: 'Password updated successfully'),
+            new OA\Response(response: 400, description: 'Password change not required'),
+            new OA\Response(response: 422, description: 'Validation error')
+        ]
+    )]
     public function forceChangePassword(Request $request)
     {
         $user = auth('api')->user();
@@ -267,9 +365,25 @@ class AuthController extends Controller
         return response()->json(['message' => 'Password updated successfully.']);
     }
 
-    /**
-     * Forgot password — creates a reset request for admin.
-     */
+    #[OA\Post(
+        path: '/api/forgot-password',
+        summary: 'Submit a password reset request to administrator',
+        tags: ['Authentication'],
+        requestBody: new OA\RequestBody(
+            required: true,
+            content: new OA\JsonContent(
+                required: ['email'],
+                properties: [
+                    new OA\Property(property: 'email', type: 'string', format: 'email', example: 'customer@example.com'),
+                ]
+            )
+        ),
+        responses: [
+            new OA\Response(response: 200, description: 'Password reset request submitted'),
+            new OA\Response(response: 409, description: 'A password reset request is already pending'),
+            new OA\Response(response: 422, description: 'Email not found or invalid')
+        ]
+    )]
     public function forgotPassword(Request $request)
     {
         $validator = Validator::make($request->all(), [

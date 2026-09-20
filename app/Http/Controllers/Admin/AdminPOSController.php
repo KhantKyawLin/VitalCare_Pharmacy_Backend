@@ -11,13 +11,23 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
+use OpenApi\Attributes as OA;
 
 class AdminPOSController extends Controller
 {
-    /**
-     * Search products for POS via barcode (ID) or name.
-     * Also returns current stock for each product.
-     */
+    #[OA\Get(
+        path: '/api/admin/pos/search',
+        summary: 'Search products by barcode/ID or name with live stock for POS counter',
+        tags: ['Admin POS'],
+        security: [['bearerAuth' => []]],
+        parameters: [
+            new OA\Parameter(name: 'q', in: 'query', required: false, schema: new OA\Schema(type: 'string', example: 'paracetamol'))
+        ],
+        responses: [
+            new OA\Response(response: 200, description: 'Matching products with current_stock and active promotions'),
+            new OA\Response(response: 401, description: 'Unauthenticated')
+        ]
+    )]
     public function search(Request $request)
     {
         $query = $request->get('q');
@@ -82,9 +92,44 @@ class AdminPOSController extends Controller
         });
     }
 
-    /**
-     * Process the POS checkout transaction.
-     */
+    #[OA\Post(
+        path: '/api/admin/pos/checkout',
+        summary: 'Process in-store POS checkout with automated FEFO batch allocation & receipt generation',
+        tags: ['Admin POS'],
+        security: [['bearerAuth' => []]],
+        requestBody: new OA\RequestBody(
+            required: true,
+            content: new OA\JsonContent(
+                required: ['items', 'payment_method', 'total_order_amount', 'discount_amount', 'tax_amount'],
+                properties: [
+                    new OA\Property(
+                        property: 'items',
+                        type: 'array',
+                        items: new OA\Items(
+                            type: 'object',
+                            required: ['product_id', 'quantity', 'price', 'subtotal'],
+                            properties: [
+                                new OA\Property(property: 'product_id', type: 'integer', example: 1),
+                                new OA\Property(property: 'quantity', type: 'integer', example: 2),
+                                new OA\Property(property: 'price', type: 'number', example: 15.00),
+                                new OA\Property(property: 'subtotal', type: 'number', example: 30.00),
+                            ]
+                        )
+                    ),
+                    new OA\Property(property: 'payment_method', type: 'string', example: 'Cash'),
+                    new OA\Property(property: 'total_order_amount', type: 'number', example: 30.00),
+                    new OA\Property(property: 'discount_amount', type: 'number', example: 0.00),
+                    new OA\Property(property: 'tax_amount', type: 'number', example: 1.50),
+                    new OA\Property(property: 'received_amount', type: 'number', example: 50.00),
+                    new OA\Property(property: 'change_return', type: 'number', example: 18.50),
+                ]
+            )
+        ),
+        responses: [
+            new OA\Response(response: 200, description: 'POS sale recorded with receipt number and FEFO batch deductions'),
+            new OA\Response(response: 422, description: 'Validation error or insufficient stock')
+        ]
+    )]
     public function checkout(Request $request, \App\Actions\AllocateFefoStockAction $allocateFefoStock)
     {
         $validator = Validator::make($request->all(), [

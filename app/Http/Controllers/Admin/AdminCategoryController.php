@@ -177,6 +177,29 @@ class AdminCategoryController extends Controller
         ], 201);
     }
 
+    #[OA\Put(
+        path: '/api/admin/categories/{id}',
+        summary: 'Update category name',
+        tags: ['Categories'],
+        security: [['bearerAuth' => []]],
+        parameters: [
+            new OA\Parameter(name: 'id', in: 'path', required: true, schema: new OA\Schema(type: 'integer', example: 1))
+        ],
+        requestBody: new OA\RequestBody(
+            required: true,
+            content: new OA\JsonContent(
+                required: ['name'],
+                properties: [
+                    new OA\Property(property: 'name', type: 'string', example: 'Vitamins & Supplements')
+                ]
+            )
+        ),
+        responses: [
+            new OA\Response(response: 200, description: 'Category updated'),
+            new OA\Response(response: 422, description: 'Validation error or name already present'),
+            new OA\Response(response: 404, description: 'Category not found')
+        ]
+    )]
     public function update(Request $request, $id)
     {
         $category = Category::findOrFail($id);
@@ -200,6 +223,19 @@ class AdminCategoryController extends Controller
         return response()->json(['message' => 'Category updated', 'category' => $category]);
     }
 
+    #[OA\Delete(
+        path: '/api/admin/categories/{id}',
+        summary: 'Delete category',
+        tags: ['Categories'],
+        security: [['bearerAuth' => []]],
+        parameters: [
+            new OA\Parameter(name: 'id', in: 'path', required: true, schema: new OA\Schema(type: 'integer', example: 1))
+        ],
+        responses: [
+            new OA\Response(response: 200, description: 'Category deleted'),
+            new OA\Response(response: 404, description: 'Category not found')
+        ]
+    )]
     public function destroy($id)
     {
         $category = Category::findOrFail($id);

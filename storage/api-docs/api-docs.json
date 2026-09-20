@@ -20,6 +20,133 @@
         }
     ],
     "paths": {
+        "/api/admin/activity-logs": {
+            "get": {
+                "tags": [
+                    "Admin Activity Logs"
+                ],
+                "summary": "List system audit trails and user action logs",
+                "operationId": "167b9109964d6d9449561a37a5528339",
+                "parameters": [
+                    {
+                        "name": "user_id",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "example": 1
+                        }
+                    },
+                    {
+                        "name": "action",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "example": "price_updated"
+                        }
+                    },
+                    {
+                        "name": "search",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "start_date",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "format": "date"
+                        }
+                    },
+                    {
+                        "name": "end_date",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "format": "date"
+                        }
+                    },
+                    {
+                        "name": "per_page",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "default": 50
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Paginated activity log records"
+                    },
+                    "401": {
+                        "description": "Unauthenticated"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/admin/activity-logs/filters": {
+            "get": {
+                "tags": [
+                    "Admin Activity Logs"
+                ],
+                "summary": "Get list of staff users and recorded action types for filter dropdowns",
+                "operationId": "40493ae611603b22ba3151b33b7fd8d5",
+                "responses": {
+                    "200": {
+                        "description": "Filter dropdown options"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/admin/activity-logs/cleanup": {
+            "delete": {
+                "tags": [
+                    "Admin Activity Logs"
+                ],
+                "summary": "Prune audit logs older than N days (Admin only)",
+                "operationId": "ccb99c0c06f493895225875640a5f32b",
+                "parameters": [
+                    {
+                        "name": "days",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "example": 60,
+                            "default": 30
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Cleaned up logs count"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
         "/api/admin/categories": {
             "get": {
                 "tags": [
@@ -110,6 +237,3217 @@
                     },
                     "401": {
                         "description": "Unauthenticated"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/admin/categories/{id}": {
+            "put": {
+                "tags": [
+                    "Categories"
+                ],
+                "summary": "Update category name",
+                "operationId": "7f6aadcc188afb1b3986756e1459fde3",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "example": 1
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "name"
+                                ],
+                                "properties": {
+                                    "name": {
+                                        "type": "string",
+                                        "example": "Vitamins & Supplements"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Category updated"
+                    },
+                    "422": {
+                        "description": "Validation error or name already present"
+                    },
+                    "404": {
+                        "description": "Category not found"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "delete": {
+                "tags": [
+                    "Categories"
+                ],
+                "summary": "Delete category",
+                "operationId": "4a5e54a426ebf7b980614875e1145ca4",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "example": 1
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Category deleted"
+                    },
+                    "404": {
+                        "description": "Category not found"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/admin/dashboard": {
+            "get": {
+                "tags": [
+                    "Admin Dashboard & Settings"
+                ],
+                "summary": "Get main admin dashboard KPIs, charts, and audit summary",
+                "operationId": "0736971f715db4b49d2cfd816e5d61f7",
+                "responses": {
+                    "200": {
+                        "description": "Dashboard metrics, sales trends, profits, and alert badges"
+                    },
+                    "401": {
+                        "description": "Unauthenticated"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/site-settings": {
+            "get": {
+                "tags": [
+                    "Admin Dashboard & Settings"
+                ],
+                "summary": "Get site branding, theme colors, and public company info",
+                "operationId": "57c3828a2c1211b64d43ca5fc246761b",
+                "responses": {
+                    "200": {
+                        "description": "Key-value map of site settings"
+                    }
+                }
+            }
+        },
+        "/api/admin/site-settings": {
+            "post": {
+                "tags": [
+                    "Admin Dashboard & Settings"
+                ],
+                "summary": "Update site branding, colors, and about content",
+                "operationId": "c36ee359a320c3a168967b0b53d48f36",
+                "requestBody": {
+                    "required": false,
+                    "content": {
+                        "multipart/form-data": {
+                            "schema": {
+                                "properties": {
+                                    "site_name": {
+                                        "type": "string",
+                                        "example": "VitalCare Pharmacy"
+                                    },
+                                    "primary_color": {
+                                        "type": "string",
+                                        "example": "#0d9488"
+                                    },
+                                    "accent_color": {
+                                        "type": "string",
+                                        "example": "#0284c7"
+                                    },
+                                    "logo": {
+                                        "type": "string",
+                                        "format": "binary"
+                                    },
+                                    "about_hero_image": {
+                                        "type": "string",
+                                        "format": "binary"
+                                    },
+                                    "about_story_image": {
+                                        "type": "string",
+                                        "format": "binary"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Settings updated successfully"
+                    },
+                    "401": {
+                        "description": "Unauthenticated"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/admin/inventory/expired-items": {
+            "get": {
+                "tags": [
+                    "Admin Inventory"
+                ],
+                "summary": "Get currently expired batches with financial value at risk",
+                "operationId": "056b47e9594dfae668c81054566aeb67",
+                "responses": {
+                    "200": {
+                        "description": "Expired items list and monthly loss stats"
+                    },
+                    "401": {
+                        "description": "Unauthenticated"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/admin/inventory/expiring-soon-configured": {
+            "get": {
+                "tags": [
+                    "Admin Inventory"
+                ],
+                "summary": "Get batches expiring within a customizable day range",
+                "operationId": "a0174fa750c43e7ba3f470cd65070bc8",
+                "parameters": [
+                    {
+                        "name": "days",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "example": 60,
+                            "default": 30
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "List of expiring batches"
+                    },
+                    "401": {
+                        "description": "Unauthenticated"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/admin/inventory/expired-items/dispose": {
+            "post": {
+                "tags": [
+                    "Admin Inventory"
+                ],
+                "summary": "Dispose or return expired batches to supplier",
+                "operationId": "f1cf82829382f05ec97c755e88be97c1",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "movement_ids",
+                                    "reason"
+                                ],
+                                "properties": {
+                                    "movement_ids": {
+                                        "type": "array",
+                                        "items": {
+                                            "type": "integer",
+                                            "example": 10
+                                        }
+                                    },
+                                    "reason": {
+                                        "type": "string",
+                                        "example": "expired",
+                                        "enum": [
+                                            "expired",
+                                            "returned_to_supplier"
+                                        ]
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Items disposed and written off"
+                    },
+                    "422": {
+                        "description": "Validation error"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/admin/inventory/disposals": {
+            "get": {
+                "tags": [
+                    "Admin Inventory"
+                ],
+                "summary": "List history of expired/returned disposal write-offs",
+                "operationId": "f393c2c0e701349474c844281ac66216",
+                "responses": {
+                    "200": {
+                        "description": "List of disposal logs"
+                    },
+                    "401": {
+                        "description": "Unauthenticated"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/admin/external-transactions": {
+            "get": {
+                "tags": [
+                    "Admin External Transactions"
+                ],
+                "summary": "List external expenses and other operational incomes",
+                "operationId": "f47413462ec8b99c5b60a35438185b48",
+                "parameters": [
+                    {
+                        "name": "type",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "all",
+                                "expense",
+                                "income"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "category",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "search",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "start_date",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "format": "date"
+                        }
+                    },
+                    {
+                        "name": "end_date",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "format": "date"
+                        }
+                    },
+                    {
+                        "name": "per_page",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "example": 15
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "List of external transactions with totals summary"
+                    },
+                    "401": {
+                        "description": "Unauthenticated"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "Admin External Transactions"
+                ],
+                "summary": "Record an external operational expense or income",
+                "operationId": "dfbb270f1569636f85d49ac6c4893e07",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "type",
+                                    "category",
+                                    "title",
+                                    "amount",
+                                    "transaction_date"
+                                ],
+                                "properties": {
+                                    "type": {
+                                        "type": "string",
+                                        "example": "expense",
+                                        "enum": [
+                                            "expense",
+                                            "income"
+                                        ]
+                                    },
+                                    "category": {
+                                        "type": "string",
+                                        "example": "Utilities"
+                                    },
+                                    "title": {
+                                        "type": "string",
+                                        "example": "Electricity bill for store AC"
+                                    },
+                                    "amount": {
+                                        "type": "number",
+                                        "example": 125000
+                                    },
+                                    "transaction_date": {
+                                        "type": "string",
+                                        "format": "date",
+                                        "example": "2026-09-20"
+                                    },
+                                    "reference_number": {
+                                        "type": "string",
+                                        "example": "INV-ELEC-09"
+                                    },
+                                    "notes": {
+                                        "type": "string",
+                                        "example": "Paid via mobile banking"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Transaction recorded successfully"
+                    },
+                    "422": {
+                        "description": "Validation error"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/admin/external-transactions/{id}": {
+            "put": {
+                "tags": [
+                    "Admin External Transactions"
+                ],
+                "summary": "Update external expense or income",
+                "operationId": "7fcbba07a824d5e845cb3f494195d5ad",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "example": 1
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "type": {
+                                        "type": "string",
+                                        "example": "expense",
+                                        "enum": [
+                                            "expense",
+                                            "income"
+                                        ]
+                                    },
+                                    "category": {
+                                        "type": "string",
+                                        "example": "Utilities"
+                                    },
+                                    "title": {
+                                        "type": "string",
+                                        "example": "Electricity bill"
+                                    },
+                                    "amount": {
+                                        "type": "number",
+                                        "example": 120000
+                                    },
+                                    "transaction_date": {
+                                        "type": "string",
+                                        "format": "date",
+                                        "example": "2026-09-20"
+                                    },
+                                    "reference_number": {
+                                        "type": "string",
+                                        "example": "INV-ELEC-09"
+                                    },
+                                    "notes": {
+                                        "type": "string",
+                                        "example": "Revised amount"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Transaction updated"
+                    },
+                    "422": {
+                        "description": "Validation error"
+                    },
+                    "404": {
+                        "description": "Transaction not found"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "delete": {
+                "tags": [
+                    "Admin External Transactions"
+                ],
+                "summary": "Delete external transaction",
+                "operationId": "03a11ed4da3203b2f18cda6a6efa98bc",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "example": 1
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Transaction deleted"
+                    },
+                    "404": {
+                        "description": "Transaction not found"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/admin/external-transactions/categories": {
+            "get": {
+                "tags": [
+                    "Admin External Transactions"
+                ],
+                "summary": "Get pre-configured expense and income categories",
+                "operationId": "9ec080f004c0f09f27624cfac5b7dd97",
+                "responses": {
+                    "200": {
+                        "description": "List of standard expense and income category labels"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/admin/faqs": {
+            "get": {
+                "tags": [
+                    "Admin FAQs"
+                ],
+                "summary": "List all FAQs including drafts for management (Admin/Pharmacist)",
+                "operationId": "22593c4564dcd4e641f5485b6eb463ba",
+                "responses": {
+                    "200": {
+                        "description": "List of all FAQs"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "Admin FAQs"
+                ],
+                "summary": "Create a new frequently asked question and answer",
+                "operationId": "d240bd217927219a5c713be24f374608",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "question",
+                                    "answer"
+                                ],
+                                "properties": {
+                                    "question": {
+                                        "type": "string",
+                                        "example": "Do you deliver on weekends?"
+                                    },
+                                    "answer": {
+                                        "type": "string",
+                                        "example": "Yes, our delivery fleet runs 7 days a week."
+                                    },
+                                    "is_published": {
+                                        "type": "boolean",
+                                        "example": true
+                                    },
+                                    "order": {
+                                        "type": "integer",
+                                        "example": 1
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "FAQ created"
+                    },
+                    "422": {
+                        "description": "Validation error"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/admin/faqs/{id}": {
+            "put": {
+                "tags": [
+                    "Admin FAQs"
+                ],
+                "summary": "Update FAQ question or answer",
+                "operationId": "0078a686ec54ead0b78949dac29d151c",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "example": 1
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "question": {
+                                        "type": "string",
+                                        "example": "Updated question?"
+                                    },
+                                    "answer": {
+                                        "type": "string",
+                                        "example": "Updated answer text."
+                                    },
+                                    "is_published": {
+                                        "type": "boolean",
+                                        "example": true
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "FAQ updated"
+                    },
+                    "404": {
+                        "description": "FAQ not found"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "delete": {
+                "tags": [
+                    "Admin FAQs"
+                ],
+                "summary": "Delete an FAQ",
+                "operationId": "c8badb032961c7e725356d48bfb9366d",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "example": 1
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "FAQ deleted"
+                    },
+                    "404": {
+                        "description": "FAQ not found"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/admin/faqs/reorder": {
+            "post": {
+                "tags": [
+                    "Admin FAQs"
+                ],
+                "summary": "Reorder FAQs display sequencing",
+                "operationId": "9050de363418464c5f097218c507d929",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "ids"
+                                ],
+                                "properties": {
+                                    "ids": {
+                                        "type": "array",
+                                        "items": {
+                                            "type": "integer",
+                                            "example": 1
+                                        }
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "FAQ sequence updated"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/admin/health-tips": {
+            "get": {
+                "tags": [
+                    "Admin Health Tips"
+                ],
+                "summary": "List all health tips with engagement metrics (Admin/Pharmacist)",
+                "operationId": "60c9329fd36631bdce29bde8fcf19909",
+                "parameters": [
+                    {
+                        "name": "search",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "per_page",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "example": 15
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Paginated health tips with author details and metrics"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "Admin Health Tips"
+                ],
+                "summary": "Publish a new health article or wellness guide",
+                "operationId": "1184a9ba3762a62fed46906eeb6f8dcd",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "multipart/form-data": {
+                            "schema": {
+                                "required": [
+                                    "title",
+                                    "content"
+                                ],
+                                "properties": {
+                                    "title": {
+                                        "type": "string",
+                                        "example": "Tips for Maintaining Blood Pressure"
+                                    },
+                                    "content": {
+                                        "type": "string",
+                                        "example": "Detailed medical advice here..."
+                                    },
+                                    "is_published": {
+                                        "type": "boolean",
+                                        "example": true
+                                    },
+                                    "image": {
+                                        "type": "string",
+                                        "format": "binary"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Health tip published"
+                    },
+                    "422": {
+                        "description": "Validation error"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/admin/health-tips/{id}": {
+            "get": {
+                "tags": [
+                    "Admin Health Tips"
+                ],
+                "summary": "Get health tip details with full feedback thread and rating breakdown",
+                "operationId": "d69314a3a0cad570b7b70d5a3b7461be",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "example": 1
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Health tip details"
+                    },
+                    "404": {
+                        "description": "Health tip not found"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "put": {
+                "tags": [
+                    "Admin Health Tips"
+                ],
+                "summary": "Update health tip article and image",
+                "operationId": "b6ea73b01f25c839b1d818c3b0b78240",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "example": 1
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": false,
+                    "content": {
+                        "multipart/form-data": {
+                            "schema": {
+                                "properties": {
+                                    "title": {
+                                        "type": "string",
+                                        "example": "Updated Article Title"
+                                    },
+                                    "content": {
+                                        "type": "string",
+                                        "example": "Updated body text"
+                                    },
+                                    "is_published": {
+                                        "type": "boolean",
+                                        "example": true
+                                    },
+                                    "image": {
+                                        "type": "string",
+                                        "format": "binary"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Health tip updated"
+                    },
+                    "404": {
+                        "description": "Health tip not found"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "delete": {
+                "tags": [
+                    "Admin Health Tips"
+                ],
+                "summary": "Delete health tip",
+                "operationId": "927d62c11938c6b9caef37345f79e20b",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "example": 1
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Health tip deleted"
+                    },
+                    "404": {
+                        "description": "Health tip not found"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/admin/health-tips/{id}/toggle-status": {
+            "patch": {
+                "tags": [
+                    "Admin Health Tips"
+                ],
+                "summary": "Toggle public publishing status of health tip",
+                "operationId": "b0bd7dcbf9c795c47a7c49f0162bd8ae",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "example": 1
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Publish status toggled"
+                    },
+                    "404": {
+                        "description": "Health tip not found"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/admin/purchases": {
+            "get": {
+                "tags": [
+                    "Admin Inventory"
+                ],
+                "summary": "List purchase orders and stock-in history with summary statistics",
+                "operationId": "e08d4de8ec7f88f0782ab91eaf848881",
+                "parameters": [
+                    {
+                        "name": "per_page",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "example": 15
+                        }
+                    },
+                    {
+                        "name": "page",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "example": 1
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Paginated purchases and total monthly spending stats"
+                    },
+                    "401": {
+                        "description": "Unauthenticated"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "Admin Inventory"
+                ],
+                "summary": "Create a new stock-in purchase with batch numbers & expiry dates",
+                "operationId": "6c931ddb273be1a8b1d74a0a7dce3063",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "supplier_id",
+                                    "purchase_date",
+                                    "items"
+                                ],
+                                "properties": {
+                                    "supplier_id": {
+                                        "type": "integer",
+                                        "example": 1
+                                    },
+                                    "purchase_date": {
+                                        "type": "string",
+                                        "format": "date",
+                                        "example": "2026-09-20"
+                                    },
+                                    "items": {
+                                        "type": "array",
+                                        "items": {
+                                            "required": [
+                                                "product_id",
+                                                "quantity",
+                                                "purchase_price",
+                                                "sale_price",
+                                                "expired_date",
+                                                "batch_number"
+                                            ],
+                                            "properties": {
+                                                "product_id": {
+                                                    "type": "integer",
+                                                    "example": 1
+                                                },
+                                                "quantity": {
+                                                    "type": "integer",
+                                                    "example": 100
+                                                },
+                                                "purchase_price": {
+                                                    "type": "number",
+                                                    "example": 8.5
+                                                },
+                                                "sale_price": {
+                                                    "type": "number",
+                                                    "example": 12
+                                                },
+                                                "expired_date": {
+                                                    "type": "string",
+                                                    "format": "date",
+                                                    "example": "2027-12-31"
+                                                },
+                                                "manufactured_date": {
+                                                    "type": "string",
+                                                    "format": "date",
+                                                    "example": "2025-01-15"
+                                                },
+                                                "batch_number": {
+                                                    "type": "string",
+                                                    "example": "BATCH-2026-09A"
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Purchase order and inventory movements created"
+                    },
+                    "422": {
+                        "description": "Validation error"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/admin/purchases/{id}": {
+            "get": {
+                "tags": [
+                    "Admin Inventory"
+                ],
+                "summary": "Get purchase order details and line items",
+                "operationId": "281279ea3d36c1ed4b19529828591c80",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "example": 1
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Purchase order details"
+                    },
+                    "404": {
+                        "description": "Purchase order not found"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/admin/inventory/low-stock": {
+            "get": {
+                "tags": [
+                    "Admin Inventory"
+                ],
+                "summary": "Get low-stock products with severity breakdown (critical, warning, notice)",
+                "operationId": "b1b13e2dfc3bf6c5689b80d1741573f9",
+                "responses": {
+                    "200": {
+                        "description": "Low stock items and risk counts"
+                    },
+                    "401": {
+                        "description": "Unauthenticated"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/admin/inventory/expiring": {
+            "get": {
+                "tags": [
+                    "Admin Inventory"
+                ],
+                "summary": "List batches expiring within next 30 days",
+                "operationId": "5c69a14512c0451b59aa12714f024c1e",
+                "responses": {
+                    "200": {
+                        "description": "List of expiring batches with remaining stock"
+                    },
+                    "401": {
+                        "description": "Unauthenticated"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/admin/inventory/adjustments": {
+            "post": {
+                "tags": [
+                    "Admin Inventory"
+                ],
+                "summary": "Log an inventory count adjustment (damaged, lost, expired, counting_error)",
+                "operationId": "cbb88e0c8b90e6df3aefdf29b8ea949c",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "product_id",
+                                    "adjustment",
+                                    "reason",
+                                    "notes"
+                                ],
+                                "properties": {
+                                    "product_id": {
+                                        "type": "integer",
+                                        "example": 1
+                                    },
+                                    "adjustment": {
+                                        "description": "Positive to add stock, negative to deduct stock",
+                                        "type": "integer",
+                                        "example": -5
+                                    },
+                                    "reason": {
+                                        "type": "string",
+                                        "example": "damaged",
+                                        "enum": [
+                                            "damaged",
+                                            "lost",
+                                            "expired",
+                                            "counting_error",
+                                            "other"
+                                        ]
+                                    },
+                                    "notes": {
+                                        "type": "string",
+                                        "example": "Dropped carton during shelf restocking"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Inventory adjustment recorded"
+                    },
+                    "422": {
+                        "description": "Validation error"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/auth/orders/{id}/pdf": {
+            "get": {
+                "tags": [
+                    "Orders (Customer)"
+                ],
+                "summary": "Download/stream PDF invoice for an order",
+                "operationId": "54b5bc01e06de3423e64bb035e0691f8",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "example": 1
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "PDF stream file",
+                        "content": {
+                            "application/pdf": {}
+                        }
+                    },
+                    "403": {
+                        "description": "Unauthorized access to invoice"
+                    },
+                    "404": {
+                        "description": "Order not found"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/admin/notifications/alerts": {
+            "get": {
+                "tags": [
+                    "Admin Dashboard & Settings"
+                ],
+                "summary": "Get consolidated admin header notification alerts (low stock, expiring, contact messages, new orders)",
+                "operationId": "0117dda1253d278884ad33ef913612be",
+                "responses": {
+                    "200": {
+                        "description": "Alert list with notification count"
+                    },
+                    "401": {
+                        "description": "Unauthenticated"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/admin/orders": {
+            "get": {
+                "tags": [
+                    "Admin Orders"
+                ],
+                "summary": "List customer and POS orders with status filtering (Admin/Staff)",
+                "operationId": "de876ba5308ded6dbb715173a14d7d4d",
+                "parameters": [
+                    {
+                        "name": "status",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "pending",
+                                "completed",
+                                "cancelled"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "order_type",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "Online",
+                                "POS"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "prescription_status",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "pending",
+                                "approved",
+                                "rejected"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "date",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "format": "date",
+                            "example": "2026-09-20"
+                        }
+                    },
+                    {
+                        "name": "per_page",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "example": 15
+                        }
+                    },
+                    {
+                        "name": "page",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "example": 1
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Paginated order collection"
+                    },
+                    "401": {
+                        "description": "Unauthenticated"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/admin/orders/{id}": {
+            "get": {
+                "tags": [
+                    "Admin Orders"
+                ],
+                "summary": "Get order details with items, batches and prescription image",
+                "operationId": "65ac4a26fbef4c535ba418343e9af522",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "example": 1
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Order details"
+                    },
+                    "404": {
+                        "description": "Order not found"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "put": {
+                "tags": [
+                    "Admin Orders"
+                ],
+                "summary": "Update order fulfillment, shipping or refund status",
+                "operationId": "27661e437f53895cbc1a8fc7e5b48dca",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "example": 1
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "status": {
+                                        "type": "string",
+                                        "example": "completed",
+                                        "enum": [
+                                            "pending",
+                                            "completed",
+                                            "cancelled"
+                                        ]
+                                    },
+                                    "deliver_status": {
+                                        "type": "string",
+                                        "example": "delivered",
+                                        "enum": [
+                                            "pending",
+                                            "shipped",
+                                            "delivered",
+                                            "returned"
+                                        ]
+                                    },
+                                    "payment_status": {
+                                        "type": "string",
+                                        "example": "paid",
+                                        "enum": [
+                                            "pending",
+                                            "paid",
+                                            "refunded"
+                                        ]
+                                    },
+                                    "refund_reason": {
+                                        "type": "string",
+                                        "example": "Customer requested cancellation",
+                                        "nullable": true
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Order updated successfully"
+                    },
+                    "422": {
+                        "description": "Validation error"
+                    },
+                    "404": {
+                        "description": "Order not found"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "delete": {
+                "tags": [
+                    "Admin Orders"
+                ],
+                "summary": "Delete order record (Admin only)",
+                "operationId": "3a023fa44ed575a1f8632e2f94036efe",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "example": 1
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Order deleted"
+                    },
+                    "404": {
+                        "description": "Order not found"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/admin/orders/{id}/prescription": {
+            "patch": {
+                "tags": [
+                    "Admin Orders"
+                ],
+                "summary": "Approve or reject customer prescription upload",
+                "operationId": "f72584c2db87284309c678c5ceb3fb5a",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "example": 1
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "prescription_status"
+                                ],
+                                "properties": {
+                                    "prescription_status": {
+                                        "type": "string",
+                                        "example": "approved",
+                                        "enum": [
+                                            "approved",
+                                            "rejected"
+                                        ]
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Prescription status updated (if rejected, prescription items cancelled & refunded)"
+                    },
+                    "422": {
+                        "description": "Validation error"
+                    },
+                    "404": {
+                        "description": "Order not found"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/admin/pos/search": {
+            "get": {
+                "tags": [
+                    "Admin POS"
+                ],
+                "summary": "Search products by barcode/ID or name with live stock for POS counter",
+                "operationId": "3546cb08b0fe4ddbf6a4a3c7165c68ab",
+                "parameters": [
+                    {
+                        "name": "q",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "example": "paracetamol"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Matching products with current_stock and active promotions"
+                    },
+                    "401": {
+                        "description": "Unauthenticated"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/admin/pos/checkout": {
+            "post": {
+                "tags": [
+                    "Admin POS"
+                ],
+                "summary": "Process in-store POS checkout with automated FEFO batch allocation & receipt generation",
+                "operationId": "dc31f48546bce6214768ae8178f385b1",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "items",
+                                    "payment_method",
+                                    "total_order_amount",
+                                    "discount_amount",
+                                    "tax_amount"
+                                ],
+                                "properties": {
+                                    "items": {
+                                        "type": "array",
+                                        "items": {
+                                            "required": [
+                                                "product_id",
+                                                "quantity",
+                                                "price",
+                                                "subtotal"
+                                            ],
+                                            "properties": {
+                                                "product_id": {
+                                                    "type": "integer",
+                                                    "example": 1
+                                                },
+                                                "quantity": {
+                                                    "type": "integer",
+                                                    "example": 2
+                                                },
+                                                "price": {
+                                                    "type": "number",
+                                                    "example": 15
+                                                },
+                                                "subtotal": {
+                                                    "type": "number",
+                                                    "example": 30
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "payment_method": {
+                                        "type": "string",
+                                        "example": "Cash"
+                                    },
+                                    "total_order_amount": {
+                                        "type": "number",
+                                        "example": 30
+                                    },
+                                    "discount_amount": {
+                                        "type": "number",
+                                        "example": 0
+                                    },
+                                    "tax_amount": {
+                                        "type": "number",
+                                        "example": 1.5
+                                    },
+                                    "received_amount": {
+                                        "type": "number",
+                                        "example": 50
+                                    },
+                                    "change_return": {
+                                        "type": "number",
+                                        "example": 18.5
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "POS sale recorded with receipt number and FEFO batch deductions"
+                    },
+                    "422": {
+                        "description": "Validation error or insufficient stock"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/admin/products": {
+            "get": {
+                "tags": [
+                    "Admin Products"
+                ],
+                "summary": "List products with inventory metrics (Admin/Staff)",
+                "operationId": "19a54880febc574f8a6a094db19a3155",
+                "parameters": [
+                    {
+                        "name": "category_id",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "example": 1
+                        }
+                    },
+                    {
+                        "name": "search",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "example": "paracetamol"
+                        }
+                    },
+                    {
+                        "name": "per_page",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "example": 15
+                        }
+                    },
+                    {
+                        "name": "page",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "example": 1
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Paginated product list with dashboard metric badges"
+                    },
+                    "401": {
+                        "description": "Unauthenticated"
+                    },
+                    "403": {
+                        "description": "Forbidden (Missing permission)"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "Admin Products"
+                ],
+                "summary": "Create a new product with optional images",
+                "operationId": "4a465c9e25906488cfd29d6947040fce",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "multipart/form-data": {
+                            "schema": {
+                                "required": [
+                                    "name",
+                                    "category_id",
+                                    "unit_id"
+                                ],
+                                "properties": {
+                                    "name": {
+                                        "type": "string",
+                                        "example": "Amoxicillin 500mg"
+                                    },
+                                    "category_id": {
+                                        "type": "integer",
+                                        "example": 1
+                                    },
+                                    "unit_id": {
+                                        "type": "integer",
+                                        "example": 1
+                                    },
+                                    "price": {
+                                        "type": "number",
+                                        "format": "float",
+                                        "example": 12.5
+                                    },
+                                    "minimum_quantity": {
+                                        "type": "integer",
+                                        "example": 10
+                                    },
+                                    "description": {
+                                        "type": "string",
+                                        "example": "Broad spectrum antibiotic"
+                                    },
+                                    "usage": {
+                                        "type": "string",
+                                        "example": "Take after meals"
+                                    },
+                                    "side_effects": {
+                                        "type": "string",
+                                        "example": "Mild nausea"
+                                    },
+                                    "dosage": {
+                                        "type": "string",
+                                        "example": "1 capsule 3 times a day"
+                                    },
+                                    "is_published": {
+                                        "type": "boolean",
+                                        "example": true
+                                    },
+                                    "requires_prescription": {
+                                        "type": "boolean",
+                                        "example": true
+                                    },
+                                    "is_chronic": {
+                                        "type": "boolean",
+                                        "example": false
+                                    },
+                                    "refill_interval_days": {
+                                        "type": "integer",
+                                        "example": 30
+                                    },
+                                    "images[]": {
+                                        "type": "array",
+                                        "items": {
+                                            "type": "string",
+                                            "format": "binary"
+                                        }
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Product created successfully"
+                    },
+                    "422": {
+                        "description": "Validation error (e.g. name already present)"
+                    },
+                    "401": {
+                        "description": "Unauthenticated"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/admin/products/bulk": {
+            "post": {
+                "tags": [
+                    "Admin Products"
+                ],
+                "summary": "Bulk create multiple products with duplicate-handling",
+                "operationId": "1611f0b1688571db4f1d3e6d759eb568",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "products"
+                                ],
+                                "properties": {
+                                    "products": {
+                                        "type": "array",
+                                        "items": {
+                                            "required": [
+                                                "name",
+                                                "category_id",
+                                                "unit_id"
+                                            ],
+                                            "properties": {
+                                                "name": {
+                                                    "type": "string",
+                                                    "example": "Product 1"
+                                                },
+                                                "category_id": {
+                                                    "type": "integer",
+                                                    "example": 1
+                                                },
+                                                "unit_id": {
+                                                    "type": "integer",
+                                                    "example": 1
+                                                },
+                                                "price": {
+                                                    "type": "number",
+                                                    "example": 5
+                                                },
+                                                "description": {
+                                                    "type": "string",
+                                                    "example": "Description here"
+                                                },
+                                                "is_published": {
+                                                    "type": "boolean",
+                                                    "example": true
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "All products created"
+                    },
+                    "200": {
+                        "description": "Partial success (some items already present)"
+                    },
+                    "422": {
+                        "description": "Validation failed or all products already present"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/admin/products/{id}": {
+            "get": {
+                "tags": [
+                    "Admin Products"
+                ],
+                "summary": "Get single product details with inventory history and active promotions",
+                "operationId": "e41e8955640747c160f0d8b3de691005",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "example": 1
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Product details"
+                    },
+                    "404": {
+                        "description": "Product not found"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "put": {
+                "tags": [
+                    "Admin Products"
+                ],
+                "summary": "Update product details and sync active batches",
+                "description": "Update a product.",
+                "operationId": "501f8350cc9232a496140735a5d629e8",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "example": 1
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": false,
+                    "content": {
+                        "multipart/form-data": {
+                            "schema": {
+                                "properties": {
+                                    "name": {
+                                        "type": "string",
+                                        "example": "Amoxicillin 500mg"
+                                    },
+                                    "category_id": {
+                                        "type": "integer",
+                                        "example": 1
+                                    },
+                                    "unit_id": {
+                                        "type": "integer",
+                                        "example": 1
+                                    },
+                                    "price": {
+                                        "type": "number",
+                                        "example": 14
+                                    },
+                                    "is_published": {
+                                        "type": "boolean",
+                                        "example": true
+                                    },
+                                    "requires_prescription": {
+                                        "type": "boolean",
+                                        "example": true
+                                    },
+                                    "deleted_image_ids[]": {
+                                        "type": "array",
+                                        "items": {
+                                            "type": "integer",
+                                            "example": 5
+                                        }
+                                    },
+                                    "images[]": {
+                                        "type": "array",
+                                        "items": {
+                                            "type": "string",
+                                            "format": "binary"
+                                        }
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Product updated successfully"
+                    },
+                    "422": {
+                        "description": "Validation error"
+                    },
+                    "404": {
+                        "description": "Product not found"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "delete": {
+                "tags": [
+                    "Admin Products"
+                ],
+                "summary": "Soft-delete a product",
+                "operationId": "d86580ef7182b3624a2c082f2c1fcf3f",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "example": 1
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Product deleted successfully"
+                    },
+                    "404": {
+                        "description": "Product not found"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/admin/products-search": {
+            "get": {
+                "tags": [
+                    "Admin Products"
+                ],
+                "summary": "Search products for dropdown select options",
+                "operationId": "bc8d5179b86e8ba1f3f9ae02cc134ecb",
+                "parameters": [
+                    {
+                        "name": "q",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "example": "para"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "List of matching products (max 10)"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/admin/products/{id}/toggle-publish": {
+            "patch": {
+                "tags": [
+                    "Admin Products"
+                ],
+                "summary": "Toggle public store visibility for a product",
+                "operationId": "9a7af69b82649e6b1d13be02c201e7b1",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "example": 1
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Publication status updated"
+                    },
+                    "404": {
+                        "description": "Product not found"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/admin/promotions": {
+            "get": {
+                "tags": [
+                    "Admin Promotions"
+                ],
+                "summary": "List all promotional campaigns and discounts",
+                "operationId": "6abca89d5ba49c4d06edc8e468a4e474",
+                "responses": {
+                    "200": {
+                        "description": "List of promotions with attached products count"
+                    },
+                    "401": {
+                        "description": "Unauthenticated"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "Admin Promotions"
+                ],
+                "summary": "Create a new promotion rule (percentage, fixed, BOGO, gift)",
+                "operationId": "2b993dbd0b478776658daa1e0775bb7d",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "title",
+                                    "type",
+                                    "promotion_scope",
+                                    "min_qty_requirement",
+                                    "start_date",
+                                    "end_date"
+                                ],
+                                "properties": {
+                                    "title": {
+                                        "type": "string",
+                                        "example": "Monsoon Mega Discount"
+                                    },
+                                    "type": {
+                                        "type": "string",
+                                        "example": "percentage",
+                                        "enum": [
+                                            "percentage",
+                                            "fixed_amount",
+                                            "cashback",
+                                            "buy_one_get_one",
+                                            "buy_one_get_gift"
+                                        ]
+                                    },
+                                    "discount_value": {
+                                        "type": "number",
+                                        "example": 15
+                                    },
+                                    "promotion_scope": {
+                                        "type": "string",
+                                        "example": "item",
+                                        "enum": [
+                                            "item",
+                                            "order"
+                                        ]
+                                    },
+                                    "min_qty_requirement": {
+                                        "type": "integer",
+                                        "example": 1
+                                    },
+                                    "min_order_value": {
+                                        "type": "number",
+                                        "example": 0
+                                    },
+                                    "start_date": {
+                                        "type": "string",
+                                        "format": "date",
+                                        "example": "2026-09-01"
+                                    },
+                                    "end_date": {
+                                        "type": "string",
+                                        "format": "date",
+                                        "example": "2026-10-31"
+                                    },
+                                    "is_active": {
+                                        "type": "boolean",
+                                        "example": true
+                                    },
+                                    "product_ids": {
+                                        "type": "array",
+                                        "items": {
+                                            "type": "integer",
+                                            "example": 1
+                                        }
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Promotion created"
+                    },
+                    "422": {
+                        "description": "Validation error"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/admin/promotions/products": {
+            "get": {
+                "tags": [
+                    "Admin Promotions"
+                ],
+                "summary": "Get products eligible for attaching to promotional campaigns",
+                "operationId": "10bc96cdaaa5553d3226fa60deb6ec3c",
+                "responses": {
+                    "200": {
+                        "description": "Products list with active promotion overlap check"
+                    },
+                    "401": {
+                        "description": "Unauthenticated"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/admin/promotions/{id}": {
+            "get": {
+                "tags": [
+                    "Admin Promotions"
+                ],
+                "summary": "Get promotion details with attached products",
+                "operationId": "42319d56d3fe062a9561b1fb5977d664",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "example": 1
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Promotion details"
+                    },
+                    "404": {
+                        "description": "Promotion not found"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "put": {
+                "tags": [
+                    "Admin Promotions"
+                ],
+                "summary": "Update promotion settings and attached products",
+                "operationId": "96b7c8f7c6aa5356fe65d2d65c082646",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "example": 1
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "title",
+                                    "type",
+                                    "promotion_scope",
+                                    "min_qty_requirement",
+                                    "start_date",
+                                    "end_date"
+                                ],
+                                "properties": {
+                                    "title": {
+                                        "type": "string",
+                                        "example": "Updated Campaign"
+                                    },
+                                    "type": {
+                                        "type": "string",
+                                        "example": "percentage",
+                                        "enum": [
+                                            "percentage",
+                                            "fixed_amount",
+                                            "cashback",
+                                            "buy_one_get_one",
+                                            "buy_one_get_gift"
+                                        ]
+                                    },
+                                    "discount_value": {
+                                        "type": "number",
+                                        "example": 20
+                                    },
+                                    "promotion_scope": {
+                                        "type": "string",
+                                        "example": "item",
+                                        "enum": [
+                                            "item",
+                                            "order"
+                                        ]
+                                    },
+                                    "min_qty_requirement": {
+                                        "type": "integer",
+                                        "example": 1
+                                    },
+                                    "min_order_value": {
+                                        "type": "number",
+                                        "example": 0
+                                    },
+                                    "start_date": {
+                                        "type": "string",
+                                        "format": "date",
+                                        "example": "2026-09-01"
+                                    },
+                                    "end_date": {
+                                        "type": "string",
+                                        "format": "date",
+                                        "example": "2026-10-31"
+                                    },
+                                    "is_active": {
+                                        "type": "boolean",
+                                        "example": true
+                                    },
+                                    "product_ids": {
+                                        "type": "array",
+                                        "items": {
+                                            "type": "integer",
+                                            "example": 1
+                                        }
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Promotion updated successfully"
+                    },
+                    "422": {
+                        "description": "Validation error"
+                    },
+                    "404": {
+                        "description": "Promotion not found"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "delete": {
+                "tags": [
+                    "Admin Promotions"
+                ],
+                "summary": "Delete promotion",
+                "operationId": "dd7591e8e68114ebe2cbcadb399001f2",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "example": 1
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Promotion deleted successfully"
+                    },
+                    "404": {
+                        "description": "Promotion not found"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/admin/reports/overview": {
+            "get": {
+                "tags": [
+                    "Admin Financial Reports"
+                ],
+                "summary": "Financial P&L summary report (Revenue, COGS, Gross/Net Profit, Recoverable Returns)",
+                "operationId": "28237340cdbb6aaa3094ee23e36a7e0b",
+                "parameters": [
+                    {
+                        "name": "range",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "default": "this_month",
+                            "enum": [
+                                "today",
+                                "yesterday",
+                                "this_week",
+                                "this_month",
+                                "last_month",
+                                "this_year",
+                                "custom"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "start_date",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "format": "date"
+                        }
+                    },
+                    {
+                        "name": "end_date",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "format": "date"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Summary P&L with comparison trends"
+                    },
+                    "401": {
+                        "description": "Unauthenticated"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/admin/reports/charts": {
+            "get": {
+                "tags": [
+                    "Admin Financial Reports"
+                ],
+                "summary": "Daily revenue vs profit time-series chart data",
+                "operationId": "b8e62185097dc6f0926c7f641a1fc58b",
+                "parameters": [
+                    {
+                        "name": "range",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "default": "this_month"
+                        }
+                    },
+                    {
+                        "name": "start_date",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "format": "date"
+                        }
+                    },
+                    {
+                        "name": "end_date",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "format": "date"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "List of daily revenue and profit points"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/admin/reports/losses": {
+            "get": {
+                "tags": [
+                    "Admin Financial Reports"
+                ],
+                "summary": "Inventory loss breakdown categorized by reason (expired, damaged, lost)",
+                "operationId": "e197f321e205cd36a2db9a5a7e020d30",
+                "parameters": [
+                    {
+                        "name": "range",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "default": "this_month"
+                        }
+                    },
+                    {
+                        "name": "start_date",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "format": "date"
+                        }
+                    },
+                    {
+                        "name": "end_date",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "format": "date"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Loss values grouped by category"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/admin/reports/top-profitable": {
+            "get": {
+                "tags": [
+                    "Admin Financial Reports"
+                ],
+                "summary": "Top 10 highest margin and most profitable medicines",
+                "operationId": "6913371959c6393aba15a15da9e72f6a",
+                "parameters": [
+                    {
+                        "name": "range",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "default": "this_month"
+                        }
+                    },
+                    {
+                        "name": "start_date",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "format": "date"
+                        }
+                    },
+                    {
+                        "name": "end_date",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "format": "date"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Top profitable products ranked by gross profit"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/admin/reports/detailed-ledger": {
+            "get": {
+                "tags": [
+                    "Admin Financial Reports"
+                ],
+                "summary": "Unified financial transaction ledger combining orders, write-offs, and operational expenses",
+                "operationId": "0db505e81f623e5f5d04a5d3882181c7",
+                "parameters": [
+                    {
+                        "name": "start_date",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "format": "date"
+                        }
+                    },
+                    {
+                        "name": "end_date",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "format": "date"
+                        }
+                    },
+                    {
+                        "name": "type",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "default": "all",
+                            "enum": [
+                                "all",
+                                "sales",
+                                "losses",
+                                "external"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "per_page",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "example": 15
+                        }
+                    },
+                    {
+                        "name": "page",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "example": 1
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Paginated unified P&L audit ledger"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/admin/roles": {
+            "get": {
+                "tags": [
+                    "Admin Roles & Permissions"
+                ],
+                "summary": "List user roles and permission sets",
+                "operationId": "2482cf02dd8867d786adf73b0da707a0",
+                "responses": {
+                    "200": {
+                        "description": "List of roles with mapped permissions and user counts"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "Admin Roles & Permissions"
+                ],
+                "summary": "Create a custom role with permissions",
+                "operationId": "2e8bb0f3e18d0c53e25f90759e365aa5",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "name"
+                                ],
+                                "properties": {
+                                    "name": {
+                                        "type": "string",
+                                        "example": "Inventory Manager"
+                                    },
+                                    "description": {
+                                        "type": "string",
+                                        "example": "Can manage purchases, batches, and suppliers"
+                                    },
+                                    "permission_ids": {
+                                        "type": "array",
+                                        "items": {
+                                            "type": "integer",
+                                            "example": 1
+                                        }
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Role created"
+                    },
+                    "422": {
+                        "description": "Validation error"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/admin/roles/{id}": {
+            "put": {
+                "tags": [
+                    "Admin Roles & Permissions"
+                ],
+                "summary": "Update role details and sync permissions",
+                "operationId": "7fd6c0e84a18da29415a94805daac2da",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "example": 1
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "name": {
+                                        "type": "string",
+                                        "example": "Lead Pharmacist"
+                                    },
+                                    "description": {
+                                        "type": "string",
+                                        "example": "Updated description"
+                                    },
+                                    "permission_ids": {
+                                        "type": "array",
+                                        "items": {
+                                            "type": "integer",
+                                            "example": 2
+                                        }
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Role updated"
+                    },
+                    "422": {
+                        "description": "Validation error"
+                    },
+                    "404": {
+                        "description": "Role not found"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "delete": {
+                "tags": [
+                    "Admin Roles & Permissions"
+                ],
+                "summary": "Delete role (Cannot delete system roles: admin, user)",
+                "operationId": "f9396613468245fb65a79b94d68fb430",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "example": 1
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Role deleted"
+                    },
+                    "403": {
+                        "description": "Cannot delete system roles"
+                    },
+                    "404": {
+                        "description": "Role not found"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/admin/permissions": {
+            "get": {
+                "tags": [
+                    "Admin Roles & Permissions"
+                ],
+                "summary": "List all granular system permissions",
+                "operationId": "66e511cfed54578e068a89a0bd34bdd4",
+                "responses": {
+                    "200": {
+                        "description": "List of all system permissions"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/admin/suppliers": {
+            "get": {
+                "tags": [
+                    "Admin Suppliers"
+                ],
+                "summary": "List all suppliers with statistics",
+                "operationId": "e0616d6b0be6589e36c9e873c9c9998d",
+                "responses": {
+                    "200": {
+                        "description": "List of suppliers with product and purchase order counts"
+                    },
+                    "401": {
+                        "description": "Unauthenticated"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "Admin Suppliers"
+                ],
+                "summary": "Create a new medicine supplier",
+                "operationId": "c8ed305afff7307c252d04d03ab5a7f5",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "name"
+                                ],
+                                "properties": {
+                                    "name": {
+                                        "type": "string",
+                                        "example": "Mega Lifesciences"
+                                    },
+                                    "phone": {
+                                        "type": "string",
+                                        "example": "+959987654321"
+                                    },
+                                    "address": {
+                                        "type": "string",
+                                        "example": "Industrial Zone 1, Yangon"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Supplier created"
+                    },
+                    "422": {
+                        "description": "Validation error"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/admin/suppliers/{id}": {
+            "get": {
+                "tags": [
+                    "Admin Suppliers"
+                ],
+                "summary": "Get supplier details with catalog and order history",
+                "operationId": "cca9240d7ed51d98175aa9d9765d07d9",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "example": 1
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Supplier details"
+                    },
+                    "404": {
+                        "description": "Supplier not found"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "put": {
+                "tags": [
+                    "Admin Suppliers"
+                ],
+                "summary": "Update supplier information",
+                "operationId": "53a5da71530f42d01b3dfed7404661fd",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "example": 1
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "name": {
+                                        "type": "string",
+                                        "example": "Mega Lifesciences Ltd"
+                                    },
+                                    "phone": {
+                                        "type": "string",
+                                        "example": "+959987654321"
+                                    },
+                                    "address": {
+                                        "type": "string",
+                                        "example": "New Address"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Supplier updated"
+                    },
+                    "404": {
+                        "description": "Supplier not found"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "delete": {
+                "tags": [
+                    "Admin Suppliers"
+                ],
+                "summary": "Delete supplier",
+                "operationId": "4eb37d92bc85f49701f60cef77f6a779",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "example": 1
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Supplier deleted"
+                    },
+                    "404": {
+                        "description": "Supplier not found"
                     }
                 },
                 "security": [
@@ -219,6 +3557,407 @@
                 ]
             }
         },
+        "/api/admin/units/{id}": {
+            "put": {
+                "tags": [
+                    "Units"
+                ],
+                "summary": "Update unit name",
+                "operationId": "94b42e485282ecd14ff11d54f189c852",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "example": 1
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "name"
+                                ],
+                                "properties": {
+                                    "name": {
+                                        "type": "string",
+                                        "example": "Bottle"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Unit updated"
+                    },
+                    "422": {
+                        "description": "Validation error or unit name already present"
+                    },
+                    "404": {
+                        "description": "Unit not found"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "delete": {
+                "tags": [
+                    "Units"
+                ],
+                "summary": "Delete unit",
+                "operationId": "038bf0f83ebcefc7f2f3d4b4bd42cd0e",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "example": 1
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Unit deleted"
+                    },
+                    "404": {
+                        "description": "Unit not found"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/admin/users": {
+            "get": {
+                "tags": [
+                    "Admin Users & Staff"
+                ],
+                "summary": "List users and customer accounts (Admin only)",
+                "operationId": "895101ef1a579f1e11fb7d2ffac04d5b",
+                "parameters": [
+                    {
+                        "name": "role",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "user",
+                                "staff",
+                                "pharmacist",
+                                "admin"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "search",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "per_page",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "example": 15
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Paginated user list with pending password resets count"
+                    },
+                    "401": {
+                        "description": "Unauthenticated"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/admin/users/{id}": {
+            "get": {
+                "tags": [
+                    "Admin Users & Staff"
+                ],
+                "summary": "Get customer/user details with past orders and wishlists",
+                "operationId": "51159e46254cba5a8a3de7f73f8a4069",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "example": 1
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "User profile with related records"
+                    },
+                    "404": {
+                        "description": "User not found"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "delete": {
+                "tags": [
+                    "Admin Users & Staff"
+                ],
+                "summary": "Delete user account (Admin only - cannot delete admin)",
+                "operationId": "7fc05bea7002c6d0e56e5c5994731c66",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "example": 1
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "User deleted"
+                    },
+                    "403": {
+                        "description": "Cannot delete admin accounts"
+                    },
+                    "404": {
+                        "description": "User not found"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/admin/staff": {
+            "post": {
+                "tags": [
+                    "Admin Users & Staff"
+                ],
+                "summary": "Create a new staff or pharmacist account with temporary password",
+                "operationId": "8adac4b2982de2b584bb544fb87b0066",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "name",
+                                    "email",
+                                    "role"
+                                ],
+                                "properties": {
+                                    "name": {
+                                        "type": "string",
+                                        "example": "Daw Khin"
+                                    },
+                                    "email": {
+                                        "type": "string",
+                                        "format": "email",
+                                        "example": "staff1@vitalcare.com"
+                                    },
+                                    "role": {
+                                        "type": "string",
+                                        "example": "pharmacist",
+                                        "enum": [
+                                            "staff",
+                                            "pharmacist"
+                                        ]
+                                    },
+                                    "role_id": {
+                                        "type": "integer",
+                                        "example": 2
+                                    },
+                                    "phone": {
+                                        "type": "string",
+                                        "example": "+95912345678"
+                                    },
+                                    "gender": {
+                                        "type": "string",
+                                        "example": "female",
+                                        "enum": [
+                                            "male",
+                                            "female",
+                                            "others"
+                                        ]
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Staff created with generated temporary password"
+                    },
+                    "422": {
+                        "description": "Validation error"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/admin/staff/{id}": {
+            "put": {
+                "tags": [
+                    "Admin Users & Staff"
+                ],
+                "summary": "Update staff or pharmacist account info or role",
+                "operationId": "b59cbc8520e73e98fb15aa09a816cf8b",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "example": 1
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "name": {
+                                        "type": "string",
+                                        "example": "Daw Khin"
+                                    },
+                                    "role": {
+                                        "type": "string",
+                                        "example": "pharmacist",
+                                        "enum": [
+                                            "staff",
+                                            "pharmacist"
+                                        ]
+                                    },
+                                    "role_id": {
+                                        "type": "integer",
+                                        "example": 2
+                                    },
+                                    "phone": {
+                                        "type": "string",
+                                        "example": "+95912345678"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Staff updated"
+                    },
+                    "422": {
+                        "description": "Validation error"
+                    },
+                    "404": {
+                        "description": "Staff not found"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/admin/users/{id}/reset-password": {
+            "post": {
+                "tags": [
+                    "Admin Users & Staff"
+                ],
+                "summary": "Manually reset a user password and flag must_change_password",
+                "operationId": "2528f28ea888c10fc4a22472f10f9c3a",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "example": 1
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Password reset with newly generated password"
+                    },
+                    "404": {
+                        "description": "User not found"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/admin/password-reset-requests": {
+            "get": {
+                "tags": [
+                    "Admin Users & Staff"
+                ],
+                "summary": "List pending user password reset requests",
+                "operationId": "5cdc0fb9de9c0363e10f41865a6b2680",
+                "responses": {
+                    "200": {
+                        "description": "List of pending password reset requests"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
         "/api/auth/login": {
             "post": {
                 "tags": [
@@ -284,6 +4023,95 @@
                 }
             }
         },
+        "/api/auth/register": {
+            "post": {
+                "tags": [
+                    "Authentication"
+                ],
+                "summary": "Register a new customer account",
+                "operationId": "d764dd091cc4494ae0baf360b03319f3",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "name",
+                                    "email",
+                                    "password",
+                                    "gender",
+                                    "phone",
+                                    "address"
+                                ],
+                                "properties": {
+                                    "name": {
+                                        "type": "string",
+                                        "example": "John Doe"
+                                    },
+                                    "email": {
+                                        "type": "string",
+                                        "format": "email",
+                                        "example": "john@example.com"
+                                    },
+                                    "password": {
+                                        "type": "string",
+                                        "format": "password",
+                                        "example": "Secret123!"
+                                    },
+                                    "gender": {
+                                        "type": "string",
+                                        "example": "male",
+                                        "enum": [
+                                            "male",
+                                            "female",
+                                            "others"
+                                        ]
+                                    },
+                                    "phone": {
+                                        "type": "string",
+                                        "example": "+95912345678"
+                                    },
+                                    "address": {
+                                        "type": "string",
+                                        "example": "45 Bogyoke Rd, Yangon"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "User registered and authenticated",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "access_token": {
+                                            "type": "string",
+                                            "example": "eyJhbGciOi..."
+                                        },
+                                        "token_type": {
+                                            "type": "string",
+                                            "example": "bearer"
+                                        },
+                                        "expires_in": {
+                                            "type": "integer",
+                                            "example": 3600
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Validation error (e.g. email already exists)"
+                    }
+                }
+            }
+        },
         "/api/auth/me": {
             "get": {
                 "tags": [
@@ -326,6 +4154,830 @@
                                 }
                             }
                         }
+                    },
+                    "401": {
+                        "description": "Unauthenticated"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/auth/logout": {
+            "post": {
+                "tags": [
+                    "Authentication"
+                ],
+                "summary": "Log out current user and invalidate token",
+                "operationId": "69281b12abb272c76871f19cb17ca563",
+                "responses": {
+                    "200": {
+                        "description": "Successfully logged out"
+                    },
+                    "401": {
+                        "description": "Unauthenticated"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/auth/refresh": {
+            "post": {
+                "tags": [
+                    "Authentication"
+                ],
+                "summary": "Refresh expired or expiring JWT token",
+                "operationId": "b2eae7a8032954d25b46c7ec6f489c68",
+                "responses": {
+                    "200": {
+                        "description": "New token issued",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "access_token": {
+                                            "type": "string",
+                                            "example": "eyJhbGciOi..."
+                                        },
+                                        "token_type": {
+                                            "type": "string",
+                                            "example": "bearer"
+                                        },
+                                        "expires_in": {
+                                            "type": "integer",
+                                            "example": 3600
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthenticated or invalid token"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/auth/profile": {
+            "post": {
+                "tags": [
+                    "Authentication"
+                ],
+                "summary": "Update current user profile information and avatar",
+                "operationId": "3c979e946b595f671f96ded2c70c1c06",
+                "requestBody": {
+                    "required": false,
+                    "content": {
+                        "multipart/form-data": {
+                            "schema": {
+                                "properties": {
+                                    "name": {
+                                        "type": "string",
+                                        "example": "John Doe"
+                                    },
+                                    "phone": {
+                                        "type": "string",
+                                        "example": "+95912345678"
+                                    },
+                                    "address": {
+                                        "type": "string",
+                                        "example": "45 Bogyoke Rd, Yangon"
+                                    },
+                                    "gender": {
+                                        "type": "string",
+                                        "example": "male",
+                                        "enum": [
+                                            "male",
+                                            "female",
+                                            "others"
+                                        ]
+                                    },
+                                    "current_password": {
+                                        "description": "Required if changing password",
+                                        "type": "string",
+                                        "format": "password"
+                                    },
+                                    "password": {
+                                        "type": "string",
+                                        "format": "password"
+                                    },
+                                    "password_confirmation": {
+                                        "type": "string",
+                                        "format": "password"
+                                    },
+                                    "profile_image": {
+                                        "type": "string",
+                                        "format": "binary"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Profile updated successfully"
+                    },
+                    "422": {
+                        "description": "Validation error"
+                    },
+                    "401": {
+                        "description": "Unauthenticated"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/auth/force-change-password": {
+            "post": {
+                "tags": [
+                    "Authentication"
+                ],
+                "summary": "Force change password on temporary admin reset",
+                "operationId": "6351300ef2ad61da742377941f66436d",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "password",
+                                    "password_confirmation"
+                                ],
+                                "properties": {
+                                    "password": {
+                                        "type": "string",
+                                        "format": "password",
+                                        "example": "NewSecurePass123!"
+                                    },
+                                    "password_confirmation": {
+                                        "type": "string",
+                                        "format": "password",
+                                        "example": "NewSecurePass123!"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Password updated successfully"
+                    },
+                    "400": {
+                        "description": "Password change not required"
+                    },
+                    "422": {
+                        "description": "Validation error"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/forgot-password": {
+            "post": {
+                "tags": [
+                    "Authentication"
+                ],
+                "summary": "Submit a password reset request to administrator",
+                "operationId": "7af8817e88ba5874543ff38f188248f1",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "email"
+                                ],
+                                "properties": {
+                                    "email": {
+                                        "type": "string",
+                                        "format": "email",
+                                        "example": "customer@example.com"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Password reset request submitted"
+                    },
+                    "409": {
+                        "description": "A password reset request is already pending"
+                    },
+                    "422": {
+                        "description": "Email not found or invalid"
+                    }
+                }
+            }
+        },
+        "/api/auth/cart": {
+            "get": {
+                "tags": [
+                    "Cart"
+                ],
+                "summary": "Get customer shopping cart",
+                "operationId": "6f59d999ad1a2185bac864808ef671c8",
+                "responses": {
+                    "200": {
+                        "description": "Current user cart with items and product details"
+                    },
+                    "401": {
+                        "description": "Unauthenticated"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/auth/cart/add": {
+            "post": {
+                "tags": [
+                    "Cart"
+                ],
+                "summary": "Add product to cart",
+                "operationId": "11f78e677dce8caa04e020ca75f58137",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "product_id",
+                                    "quantity"
+                                ],
+                                "properties": {
+                                    "product_id": {
+                                        "type": "integer",
+                                        "example": 1
+                                    },
+                                    "quantity": {
+                                        "type": "integer",
+                                        "example": 2
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Added to cart successfully"
+                    },
+                    "422": {
+                        "description": "Validation error or product expired/max quantity exceeded"
+                    },
+                    "401": {
+                        "description": "Unauthenticated"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/auth/cart/remove/{product_id}": {
+            "delete": {
+                "tags": [
+                    "Cart"
+                ],
+                "summary": "Remove item from cart",
+                "operationId": "580a771ef2a4f8e9cbf963300f43bc44",
+                "parameters": [
+                    {
+                        "name": "product_id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "example": 1
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Removed from cart"
+                    },
+                    "404": {
+                        "description": "Cart or item not found"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/auth/cart/update/{product_id}": {
+            "patch": {
+                "tags": [
+                    "Cart"
+                ],
+                "summary": "Update item quantity in cart",
+                "operationId": "23a3f0e5ae63cacf083bb431fd2ef31a",
+                "parameters": [
+                    {
+                        "name": "product_id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "example": 1
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "quantity"
+                                ],
+                                "properties": {
+                                    "quantity": {
+                                        "type": "integer",
+                                        "example": 3
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Cart item updated"
+                    },
+                    "404": {
+                        "description": "Cart or item not found"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/contact": {
+            "post": {
+                "tags": [
+                    "Public Utilities"
+                ],
+                "summary": "Submit customer support message or inquiry",
+                "operationId": "1f8c78aa5045d8eab0eca496f4bbbdd1",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "name",
+                                    "email",
+                                    "subject",
+                                    "message"
+                                ],
+                                "properties": {
+                                    "name": {
+                                        "type": "string",
+                                        "example": "Aung Aung"
+                                    },
+                                    "email": {
+                                        "type": "string",
+                                        "format": "email",
+                                        "example": "aung@example.com"
+                                    },
+                                    "subject": {
+                                        "type": "string",
+                                        "example": "Order Inquiry"
+                                    },
+                                    "order_id": {
+                                        "type": "string",
+                                        "example": "ORD-12345"
+                                    },
+                                    "message": {
+                                        "type": "string",
+                                        "example": "When will my order arrive?"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Message sent successfully"
+                    },
+                    "422": {
+                        "description": "Validation error"
+                    }
+                }
+            }
+        },
+        "/api/admin/contact-messages": {
+            "get": {
+                "tags": [
+                    "Public Utilities"
+                ],
+                "summary": "List customer contact messages received (Admin only)",
+                "operationId": "eced123df69f6bc1c1a76c0f44e18edd",
+                "responses": {
+                    "200": {
+                        "description": "List of submitted contact inquiries"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/admin/contact-messages/{id}": {
+            "put": {
+                "tags": [
+                    "Public Utilities"
+                ],
+                "summary": "Update status of customer contact message",
+                "operationId": "5389f0a467d61b977b929f50412ec90e",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "example": 1
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "status"
+                                ],
+                                "properties": {
+                                    "status": {
+                                        "type": "string",
+                                        "example": "replied",
+                                        "enum": [
+                                            "unread",
+                                            "read",
+                                            "replied"
+                                        ]
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Message status updated"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/faqs": {
+            "get": {
+                "tags": [
+                    "Health Tips & FAQs (Public)"
+                ],
+                "summary": "List published FAQs ordered by display position for public users",
+                "operationId": "00535134383f42bd4a8ec4e8657e2c0e",
+                "responses": {
+                    "200": {
+                        "description": "List of frequently asked questions and answers"
+                    }
+                }
+            }
+        },
+        "/api/health-tips/{id}/feedbacks": {
+            "get": {
+                "tags": [
+                    "Health Tips & FAQs (Public)"
+                ],
+                "summary": "List user reviews and feedback for a specific health tip",
+                "operationId": "11beefa3197995b406024a9e3bf24b65",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "example": 1
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "List of feedbacks and ratings"
+                    }
+                }
+            }
+        },
+        "/api/health-tips/{id}/feedback": {
+            "post": {
+                "tags": [
+                    "Health Tips & FAQs (Public)"
+                ],
+                "summary": "Post feedback and rating (1-5) on a health tip",
+                "operationId": "3569db17986b4a0727f8a2d265095254",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "example": 1
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "comments",
+                                    "rating"
+                                ],
+                                "properties": {
+                                    "comments": {
+                                        "type": "string",
+                                        "example": "Very informative tip, thank you!"
+                                    },
+                                    "rating": {
+                                        "type": "integer",
+                                        "example": 5,
+                                        "maximum": 5,
+                                        "minimum": 1
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Feedback submitted"
+                    },
+                    "422": {
+                        "description": "Validation error"
+                    },
+                    "401": {
+                        "description": "Unauthenticated"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/health-tips": {
+            "get": {
+                "tags": [
+                    "Health Tips & FAQs (Public)"
+                ],
+                "summary": "List published health tips and wellness advice for public users",
+                "operationId": "10918ff7553d3ddd32fc7f11651999b3",
+                "responses": {
+                    "200": {
+                        "description": "List of published health tips"
+                    }
+                }
+            }
+        },
+        "/api/health-tips/{id}": {
+            "get": {
+                "tags": [
+                    "Health Tips & FAQs (Public)"
+                ],
+                "summary": "Get health tip details with author info, feedbacks, and related tips",
+                "operationId": "28644de34909a9752a30aeea1b7d9673",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "example": 1
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Health tip details, feedbacks, and recommendations"
+                    },
+                    "404": {
+                        "description": "Health tip not found"
+                    }
+                }
+            }
+        },
+        "/api/auth/orders": {
+            "get": {
+                "tags": [
+                    "Orders (Customer)"
+                ],
+                "summary": "List current user orders",
+                "operationId": "7b0c8c40178b3a1f845a7356cba12976",
+                "responses": {
+                    "200": {
+                        "description": "List of past orders with products"
+                    },
+                    "401": {
+                        "description": "Unauthenticated"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/auth/orders/{id}": {
+            "get": {
+                "tags": [
+                    "Orders (Customer)"
+                ],
+                "summary": "Get order details by ID",
+                "operationId": "8f473f107644ab22fb53da9af64a39de",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "example": 1
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Order details with order products"
+                    },
+                    "404": {
+                        "description": "Order not found"
+                    },
+                    "401": {
+                        "description": "Unauthenticated"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/auth/checkout": {
+            "post": {
+                "tags": [
+                    "Orders (Customer)"
+                ],
+                "summary": "Checkout cart and place order",
+                "operationId": "759fca2c7c33d80afc24384bcc0b93fc",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "multipart/form-data": {
+                            "schema": {
+                                "required": [
+                                    "delivery_address",
+                                    "contact_phone",
+                                    "payment_method"
+                                ],
+                                "properties": {
+                                    "delivery_address": {
+                                        "type": "string",
+                                        "example": "123 Main St, Yangon"
+                                    },
+                                    "contact_phone": {
+                                        "type": "string",
+                                        "example": "+959123456789"
+                                    },
+                                    "payment_method": {
+                                        "type": "string",
+                                        "example": "Cash",
+                                        "enum": [
+                                            "Cash",
+                                            "Online"
+                                        ]
+                                    },
+                                    "payment_proof": {
+                                        "description": "Required if Online payment",
+                                        "type": "string",
+                                        "format": "binary"
+                                    },
+                                    "prescription_image": {
+                                        "description": "Required if prescription drugs in cart",
+                                        "type": "string",
+                                        "format": "binary"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Order placed successfully"
+                    },
+                    "400": {
+                        "description": "Cart empty or missing prescription image"
+                    },
+                    "422": {
+                        "description": "Validation error"
+                    },
+                    "401": {
+                        "description": "Unauthenticated"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/auth/orders/{id}/reorder": {
+            "post": {
+                "tags": [
+                    "Orders (Customer)"
+                ],
+                "summary": "Re-add all non-gift items from a previous order into the current cart",
+                "operationId": "6db9850994370f870f8070cac988e243",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "example": 1
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Items successfully re-added to cart"
+                    },
+                    "404": {
+                        "description": "Order not found"
                     },
                     "401": {
                         "description": "Unauthenticated"
@@ -406,6 +5058,34 @@
                 }
             }
         },
+        "/api/products/top-sellers": {
+            "get": {
+                "tags": [
+                    "Products (Catalog)"
+                ],
+                "summary": "Get top 10 best-selling published medicines for store homepage",
+                "operationId": "cd01a8426a7a943fbf41114c80ddda83",
+                "responses": {
+                    "200": {
+                        "description": "List of top selling products"
+                    }
+                }
+            }
+        },
+        "/api/products/special-offers": {
+            "get": {
+                "tags": [
+                    "Products (Catalog)"
+                ],
+                "summary": "Get active discount and promotional medicines for storefront banner",
+                "operationId": "2604783e0b702c595b683f1dc018199c",
+                "responses": {
+                    "200": {
+                        "description": "List of discounted products with active promotions"
+                    }
+                }
+            }
+        },
         "/api/products/{id}": {
             "get": {
                 "tags": [
@@ -434,6 +5114,236 @@
                     }
                 }
             }
+        },
+        "/api/categories": {
+            "get": {
+                "tags": [
+                    "Products (Catalog)"
+                ],
+                "summary": "List medicine categories for public storefront navigation",
+                "operationId": "3f00f2f5b0bf5b4cae21333006262d96",
+                "responses": {
+                    "200": {
+                        "description": "List of all categories"
+                    }
+                }
+            }
+        },
+        "/api/auth/refill-reminders": {
+            "get": {
+                "tags": [
+                    "Refill Reminders"
+                ],
+                "summary": "Get active medicine refill reminders for current customer",
+                "operationId": "c0c2fa9c188da3d906fc4c9063aace04",
+                "responses": {
+                    "200": {
+                        "description": "List of upcoming or pending refill reminders"
+                    },
+                    "401": {
+                        "description": "Unauthenticated"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/auth/refill-reminders/{reminder}/action": {
+            "post": {
+                "tags": [
+                    "Refill Reminders"
+                ],
+                "summary": "Mark refill reminder as actioned or ignored",
+                "operationId": "4408273c79811c5e25c59b1bd56cf4a2",
+                "parameters": [
+                    {
+                        "name": "reminder",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "example": 1
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "action"
+                                ],
+                                "properties": {
+                                    "action": {
+                                        "type": "string",
+                                        "example": "actioned",
+                                        "enum": [
+                                            "actioned",
+                                            "ignored"
+                                        ]
+                                    },
+                                    "notes": {
+                                        "type": "string",
+                                        "example": "Purchased directly from counter",
+                                        "nullable": true
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Reminder updated successfully"
+                    },
+                    "403": {
+                        "description": "Unauthorized access"
+                    },
+                    "422": {
+                        "description": "Validation error"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/search": {
+            "get": {
+                "tags": [
+                    "Public Utilities"
+                ],
+                "summary": "Global autocomplete search across medicines, categories, and health tips",
+                "operationId": "2754ee3c6371023cefd5b35cf65e9e07",
+                "parameters": [
+                    {
+                        "name": "q",
+                        "in": "query",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "example": "paracetamol"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Matching products and health tips"
+                    }
+                }
+            }
+        },
+        "/api/auth/wishlist": {
+            "get": {
+                "tags": [
+                    "Wishlist"
+                ],
+                "summary": "Get customer saved wishlist",
+                "operationId": "c8196148fcce1711e883d1a0c3e87d1b",
+                "responses": {
+                    "200": {
+                        "description": "List of wishlist items with product pictures"
+                    },
+                    "401": {
+                        "description": "Unauthenticated"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/auth/wishlist/add": {
+            "post": {
+                "tags": [
+                    "Wishlist"
+                ],
+                "summary": "Add product to wishlist",
+                "operationId": "798e47b19c55bc0fce3614b9c3f4a93f",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "product_id"
+                                ],
+                                "properties": {
+                                    "product_id": {
+                                        "type": "integer",
+                                        "example": 1
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Added to wishlist"
+                    },
+                    "400": {
+                        "description": "Product already in wishlist"
+                    },
+                    "422": {
+                        "description": "Product expired or unavailable"
+                    },
+                    "401": {
+                        "description": "Unauthenticated"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/auth/wishlist/remove/{product_id}": {
+            "delete": {
+                "tags": [
+                    "Wishlist"
+                ],
+                "summary": "Remove product from wishlist",
+                "operationId": "91b0f4699dd4ab520dc05011296015a6",
+                "parameters": [
+                    {
+                        "name": "product_id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "example": 1
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Removed from wishlist"
+                    },
+                    "404": {
+                        "description": "Item not found in wishlist"
+                    },
+                    "401": {
+                        "description": "Unauthenticated"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
         }
     },
     "components": {
@@ -448,20 +5358,100 @@
     },
     "tags": [
         {
+            "name": "Admin Activity Logs",
+            "description": "Admin Activity Logs"
+        },
+        {
             "name": "Categories",
             "description": "Categories"
+        },
+        {
+            "name": "Admin Dashboard & Settings",
+            "description": "Admin Dashboard & Settings"
+        },
+        {
+            "name": "Admin Inventory",
+            "description": "Admin Inventory"
+        },
+        {
+            "name": "Admin External Transactions",
+            "description": "Admin External Transactions"
+        },
+        {
+            "name": "Admin FAQs",
+            "description": "Admin FAQs"
+        },
+        {
+            "name": "Admin Health Tips",
+            "description": "Admin Health Tips"
+        },
+        {
+            "name": "Orders (Customer)",
+            "description": "Orders (Customer)"
+        },
+        {
+            "name": "Admin Orders",
+            "description": "Admin Orders"
+        },
+        {
+            "name": "Admin POS",
+            "description": "Admin POS"
+        },
+        {
+            "name": "Admin Products",
+            "description": "Admin Products"
+        },
+        {
+            "name": "Admin Promotions",
+            "description": "Admin Promotions"
+        },
+        {
+            "name": "Admin Financial Reports",
+            "description": "Admin Financial Reports"
+        },
+        {
+            "name": "Admin Roles & Permissions",
+            "description": "Admin Roles & Permissions"
+        },
+        {
+            "name": "Admin Suppliers",
+            "description": "Admin Suppliers"
         },
         {
             "name": "Units",
             "description": "Units"
         },
         {
+            "name": "Admin Users & Staff",
+            "description": "Admin Users & Staff"
+        },
+        {
             "name": "Authentication",
             "description": "Authentication"
         },
         {
+            "name": "Cart",
+            "description": "Cart"
+        },
+        {
+            "name": "Public Utilities",
+            "description": "Public Utilities"
+        },
+        {
+            "name": "Health Tips & FAQs (Public)",
+            "description": "Health Tips & FAQs (Public)"
+        },
+        {
             "name": "Products (Catalog)",
             "description": "Products (Catalog)"
+        },
+        {
+            "name": "Refill Reminders",
+            "description": "Refill Reminders"
+        },
+        {
+            "name": "Wishlist",
+            "description": "Wishlist"
         }
     ]
 }

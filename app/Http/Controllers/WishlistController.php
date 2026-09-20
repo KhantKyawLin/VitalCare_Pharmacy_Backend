@@ -5,12 +5,20 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use App\Models\Wishlist;
 use App\Models\Product;
+use OpenApi\Attributes as OA;
 
 class WishlistController extends Controller
 {
-    /**
-     * Get the authenticated user's wishlist.
-     */
+    #[OA\Get(
+        path: '/api/auth/wishlist',
+        summary: 'Get customer saved wishlist',
+        tags: ['Wishlist'],
+        security: [['bearerAuth' => []]],
+        responses: [
+            new OA\Response(response: 200, description: 'List of wishlist items with product pictures'),
+            new OA\Response(response: 401, description: 'Unauthenticated')
+        ]
+    )]
     public function index(Request $request)
     {
         $user = $request->user('api');
@@ -22,9 +30,27 @@ class WishlistController extends Controller
         return response()->json($wishlists);
     }
 
-    /**
-     * Add a product to the user's wishlist.
-     */
+    #[OA\Post(
+        path: '/api/auth/wishlist/add',
+        summary: 'Add product to wishlist',
+        tags: ['Wishlist'],
+        security: [['bearerAuth' => []]],
+        requestBody: new OA\RequestBody(
+            required: true,
+            content: new OA\JsonContent(
+                required: ['product_id'],
+                properties: [
+                    new OA\Property(property: 'product_id', type: 'integer', example: 1)
+                ]
+            )
+        ),
+        responses: [
+            new OA\Response(response: 200, description: 'Added to wishlist'),
+            new OA\Response(response: 400, description: 'Product already in wishlist'),
+            new OA\Response(response: 422, description: 'Product expired or unavailable'),
+            new OA\Response(response: 401, description: 'Unauthenticated')
+        ]
+    )]
     public function add(Request $request)
     {
         $user = $request->user('api');
@@ -55,9 +81,20 @@ class WishlistController extends Controller
         return response()->json(['message' => 'Added to wishlist', 'wishlist' => $wishlist]);
     }
 
-    /**
-     * Remove a product from the user's wishlist.
-     */
+    #[OA\Delete(
+        path: '/api/auth/wishlist/remove/{product_id}',
+        summary: 'Remove product from wishlist',
+        tags: ['Wishlist'],
+        security: [['bearerAuth' => []]],
+        parameters: [
+            new OA\Parameter(name: 'product_id', in: 'path', required: true, schema: new OA\Schema(type: 'integer', example: 1))
+        ],
+        responses: [
+            new OA\Response(response: 200, description: 'Removed from wishlist'),
+            new OA\Response(response: 404, description: 'Item not found in wishlist'),
+            new OA\Response(response: 401, description: 'Unauthenticated')
+        ]
+    )]
     public function remove(Request $request, $id)
     {
         $user = $request->user('api');

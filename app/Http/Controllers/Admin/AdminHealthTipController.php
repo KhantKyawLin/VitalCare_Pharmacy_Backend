@@ -7,9 +7,23 @@ use App\Models\HealthTip;
 use App\Models\ActivityLog;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
+use OpenApi\Attributes as OA;
 
 class AdminHealthTipController extends Controller
 {
+    #[OA\Get(
+        path: '/api/admin/health-tips',
+        summary: 'List all health tips with engagement metrics (Admin/Pharmacist)',
+        tags: ['Admin Health Tips'],
+        security: [['bearerAuth' => []]],
+        parameters: [
+            new OA\Parameter(name: 'search', in: 'query', required: false, schema: new OA\Schema(type: 'string')),
+            new OA\Parameter(name: 'per_page', in: 'query', required: false, schema: new OA\Schema(type: 'integer', example: 15)),
+        ],
+        responses: [
+            new OA\Response(response: 200, description: 'Paginated health tips with author details and metrics')
+        ]
+    )]
     public function index(Request $request)
     {
         $query = HealthTip::with(['author' => function($q) {
@@ -39,6 +53,19 @@ class AdminHealthTipController extends Controller
         ]);
     }
 
+    #[OA\Get(
+        path: '/api/admin/health-tips/{id}',
+        summary: 'Get health tip details with full feedback thread and rating breakdown',
+        tags: ['Admin Health Tips'],
+        security: [['bearerAuth' => []]],
+        parameters: [
+            new OA\Parameter(name: 'id', in: 'path', required: true, schema: new OA\Schema(type: 'integer', example: 1))
+        ],
+        responses: [
+            new OA\Response(response: 200, description: 'Health tip details'),
+            new OA\Response(response: 404, description: 'Health tip not found')
+        ]
+    )]
     public function show($id)
     {
         $tip = HealthTip::with(['author' => function($q) {
@@ -58,6 +85,31 @@ class AdminHealthTipController extends Controller
         ]);
     }
 
+    #[OA\Post(
+        path: '/api/admin/health-tips',
+        summary: 'Publish a new health article or wellness guide',
+        tags: ['Admin Health Tips'],
+        security: [['bearerAuth' => []]],
+        requestBody: new OA\RequestBody(
+            required: true,
+            content: new OA\MediaType(
+                mediaType: 'multipart/form-data',
+                schema: new OA\Schema(
+                    required: ['title', 'content'],
+                    properties: [
+                        new OA\Property(property: 'title', type: 'string', example: 'Tips for Maintaining Blood Pressure'),
+                        new OA\Property(property: 'content', type: 'string', example: 'Detailed medical advice here...'),
+                        new OA\Property(property: 'is_published', type: 'boolean', example: true),
+                        new OA\Property(property: 'image', type: 'string', format: 'binary'),
+                    ]
+                )
+            )
+        ),
+        responses: [
+            new OA\Response(response: 201, description: 'Health tip published'),
+            new OA\Response(response: 422, description: 'Validation error')
+        ]
+    )]
     public function store(Request $request)
     {
         $validator = Validator::make($request->all(), [
@@ -84,6 +136,33 @@ class AdminHealthTipController extends Controller
         return response()->json(['message' => 'Health tip created', 'health_tip' => $tip], 201);
     }
 
+    #[OA\Put(
+        path: '/api/admin/health-tips/{id}',
+        summary: 'Update health tip article and image',
+        tags: ['Admin Health Tips'],
+        security: [['bearerAuth' => []]],
+        parameters: [
+            new OA\Parameter(name: 'id', in: 'path', required: true, schema: new OA\Schema(type: 'integer', example: 1))
+        ],
+        requestBody: new OA\RequestBody(
+            required: false,
+            content: new OA\MediaType(
+                mediaType: 'multipart/form-data',
+                schema: new OA\Schema(
+                    properties: [
+                        new OA\Property(property: 'title', type: 'string', example: 'Updated Article Title'),
+                        new OA\Property(property: 'content', type: 'string', example: 'Updated body text'),
+                        new OA\Property(property: 'is_published', type: 'boolean', example: true),
+                        new OA\Property(property: 'image', type: 'string', format: 'binary'),
+                    ]
+                )
+            )
+        ),
+        responses: [
+            new OA\Response(response: 200, description: 'Health tip updated'),
+            new OA\Response(response: 404, description: 'Health tip not found')
+        ]
+    )]
     public function update(Request $request, $id)
     {
         $tip = HealthTip::findOrFail($id);
@@ -103,17 +182,44 @@ class AdminHealthTipController extends Controller
         return response()->json(['message' => 'Health tip updated', 'health_tip' => $tip]);
     }
 
+    #[OA\Patch(
+        path: '/api/admin/health-tips/{id}/toggle-status',
+        summary: 'Toggle public publishing status of health tip',
+        tags: ['Admin Health Tips'],
+        security: [['bearerAuth' => []]],
+        parameters: [
+            new OA\Parameter(name: 'id', in: 'path', required: true, schema: new OA\Schema(type: 'integer', example: 1))
+        ],
+        responses: [
+            new OA\Response(response: 200, description: 'Publish status toggled'),
+            new OA\Response(response: 404, description: 'Health tip not found')
+        ]
+    )]
     public function toggleStatus($id)
     {
         $tip = HealthTip::findOrFail($id);
         $tip->is_published = !$tip->is_published;
         $tip->save();
 
-        ActivityLog::log('updated', 'HealthTip', $id, "Health tip '{$tip->title}' visibility toggled to " . ($tip->is_published ? 'Published' : 'Draft'));
+        $status = $tip->is_published ? 'Published' : 'Draft';
+        ActivityLog::log('updated', 'HealthTip', $id, "Health tip '{$tip->title}' visibility toggled to {$status}");
 
         return response()->json(['message' => 'Status updated', 'is_published' => $tip->is_published]);
     }
 
+    #[OA\Delete(
+        path: '/api/admin/health-tips/{id}',
+        summary: 'Delete health tip',
+        tags: ['Admin Health Tips'],
+        security: [['bearerAuth' => []]],
+        parameters: [
+            new OA\Parameter(name: 'id', in: 'path', required: true, schema: new OA\Schema(type: 'integer', example: 1))
+        ],
+        responses: [
+            new OA\Response(response: 200, description: 'Health tip deleted'),
+            new OA\Response(response: 404, description: 'Health tip not found')
+        ]
+    )]
     public function destroy($id)
     {
         $tip = HealthTip::findOrFail($id);

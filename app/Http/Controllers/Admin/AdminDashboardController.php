@@ -10,9 +10,20 @@ use App\Models\SiteSetting;
 use App\Models\ActivityLog;
 use App\Models\PasswordResetRequest;
 use Illuminate\Http\Request;
+use OpenApi\Attributes as OA;
 
 class AdminDashboardController extends Controller
 {
+    #[OA\Get(
+        path: '/api/admin/dashboard',
+        summary: 'Get main admin dashboard KPIs, charts, and audit summary',
+        tags: ['Admin Dashboard & Settings'],
+        security: [['bearerAuth' => []]],
+        responses: [
+            new OA\Response(response: 200, description: 'Dashboard metrics, sales trends, profits, and alert badges'),
+            new OA\Response(response: 401, description: 'Unauthenticated')
+        ]
+    )]
     public function index()
     {
         $today = now()->toDateString();
@@ -159,18 +170,46 @@ class AdminDashboardController extends Controller
         ]);
     }
 
-    /**
-     * Get site settings.
-     */
+    #[OA\Get(
+        path: '/api/site-settings',
+        summary: 'Get site branding, theme colors, and public company info',
+        tags: ['Admin Dashboard & Settings'],
+        responses: [
+            new OA\Response(response: 200, description: 'Key-value map of site settings')
+        ]
+    )]
     public function getSettings()
     {
         $settings = SiteSetting::all()->pluck('value', 'key');
         return response()->json($settings);
     }
 
-    /**
-     * Update site settings (branding).
-     */
+    #[OA\Post(
+        path: '/api/admin/site-settings',
+        summary: 'Update site branding, colors, and about content',
+        tags: ['Admin Dashboard & Settings'],
+        security: [['bearerAuth' => []]],
+        requestBody: new OA\RequestBody(
+            required: false,
+            content: new OA\MediaType(
+                mediaType: 'multipart/form-data',
+                schema: new OA\Schema(
+                    properties: [
+                        new OA\Property(property: 'site_name', type: 'string', example: 'VitalCare Pharmacy'),
+                        new OA\Property(property: 'primary_color', type: 'string', example: '#0d9488'),
+                        new OA\Property(property: 'accent_color', type: 'string', example: '#0284c7'),
+                        new OA\Property(property: 'logo', type: 'string', format: 'binary'),
+                        new OA\Property(property: 'about_hero_image', type: 'string', format: 'binary'),
+                        new OA\Property(property: 'about_story_image', type: 'string', format: 'binary'),
+                    ]
+                )
+            )
+        ),
+        responses: [
+            new OA\Response(response: 200, description: 'Settings updated successfully'),
+            new OA\Response(response: 401, description: 'Unauthenticated')
+        ]
+    )]
     public function updateSettings(Request $request)
     {
         $allowedKeys = [

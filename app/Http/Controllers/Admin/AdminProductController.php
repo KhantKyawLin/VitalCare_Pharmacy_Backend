@@ -11,12 +11,27 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
+use OpenApi\Attributes as OA;
 
 class AdminProductController extends Controller
 {
-    /**
-     * List all products with stock info.
-     */
+    #[OA\Get(
+        path: '/api/admin/products',
+        summary: 'List products with inventory metrics (Admin/Staff)',
+        tags: ['Admin Products'],
+        security: [['bearerAuth' => []]],
+        parameters: [
+            new OA\Parameter(name: 'category_id', in: 'query', required: false, schema: new OA\Schema(type: 'integer', example: 1)),
+            new OA\Parameter(name: 'search', in: 'query', required: false, schema: new OA\Schema(type: 'string', example: 'paracetamol')),
+            new OA\Parameter(name: 'per_page', in: 'query', required: false, schema: new OA\Schema(type: 'integer', example: 15)),
+            new OA\Parameter(name: 'page', in: 'query', required: false, schema: new OA\Schema(type: 'integer', example: 1)),
+        ],
+        responses: [
+            new OA\Response(response: 200, description: 'Paginated product list with dashboard metric badges'),
+            new OA\Response(response: 401, description: 'Unauthenticated'),
+            new OA\Response(response: 403, description: 'Forbidden (Missing permission)')
+        ]
+    )]
     public function index(Request $request)
     {
         $query = Product::with([
@@ -66,9 +81,42 @@ class AdminProductController extends Controller
         ]);
     }
 
-    /**
-     * Create a single product.
-     */
+    #[OA\Post(
+        path: '/api/admin/products',
+        summary: 'Create a new product with optional images',
+        tags: ['Admin Products'],
+        security: [['bearerAuth' => []]],
+        requestBody: new OA\RequestBody(
+            required: true,
+            content: new OA\MediaType(
+                mediaType: 'multipart/form-data',
+                schema: new OA\Schema(
+                    required: ['name', 'category_id', 'unit_id'],
+                    properties: [
+                        new OA\Property(property: 'name', type: 'string', example: 'Amoxicillin 500mg'),
+                        new OA\Property(property: 'category_id', type: 'integer', example: 1),
+                        new OA\Property(property: 'unit_id', type: 'integer', example: 1),
+                        new OA\Property(property: 'price', type: 'number', format: 'float', example: 12.50),
+                        new OA\Property(property: 'minimum_quantity', type: 'integer', example: 10),
+                        new OA\Property(property: 'description', type: 'string', example: 'Broad spectrum antibiotic'),
+                        new OA\Property(property: 'usage', type: 'string', example: 'Take after meals'),
+                        new OA\Property(property: 'side_effects', type: 'string', example: 'Mild nausea'),
+                        new OA\Property(property: 'dosage', type: 'string', example: '1 capsule 3 times a day'),
+                        new OA\Property(property: 'is_published', type: 'boolean', example: true),
+                        new OA\Property(property: 'requires_prescription', type: 'boolean', example: true),
+                        new OA\Property(property: 'is_chronic', type: 'boolean', example: false),
+                        new OA\Property(property: 'refill_interval_days', type: 'integer', example: 30),
+                        new OA\Property(property: 'images[]', type: 'array', items: new OA\Items(type: 'string', format: 'binary')),
+                    ]
+                )
+            )
+        ),
+        responses: [
+            new OA\Response(response: 201, description: 'Product created successfully'),
+            new OA\Response(response: 422, description: 'Validation error (e.g. name already present)'),
+            new OA\Response(response: 401, description: 'Unauthenticated')
+        ]
+    )]
     public function store(Request $request)
     {
         $name = trim($request->name ?? '');
@@ -137,9 +185,41 @@ class AdminProductController extends Controller
         }
     }
 
-    /**
-     * Bulk create products.
-     */
+    #[OA\Post(
+        path: '/api/admin/products/bulk',
+        summary: 'Bulk create multiple products with duplicate-handling',
+        tags: ['Admin Products'],
+        security: [['bearerAuth' => []]],
+        requestBody: new OA\RequestBody(
+            required: true,
+            content: new OA\JsonContent(
+                required: ['products'],
+                properties: [
+                    new OA\Property(
+                        property: 'products',
+                        type: 'array',
+                        items: new OA\Items(
+                            type: 'object',
+                            required: ['name', 'category_id', 'unit_id'],
+                            properties: [
+                                new OA\Property(property: 'name', type: 'string', example: 'Product 1'),
+                                new OA\Property(property: 'category_id', type: 'integer', example: 1),
+                                new OA\Property(property: 'unit_id', type: 'integer', example: 1),
+                                new OA\Property(property: 'price', type: 'number', example: 5.00),
+                                new OA\Property(property: 'description', type: 'string', example: 'Description here'),
+                                new OA\Property(property: 'is_published', type: 'boolean', example: true),
+                            ]
+                        )
+                    )
+                ]
+            )
+        ),
+        responses: [
+            new OA\Response(response: 201, description: 'All products created'),
+            new OA\Response(response: 200, description: 'Partial success (some items already present)'),
+            new OA\Response(response: 422, description: 'Validation failed or all products already present')
+        ]
+    )]
     public function bulkStore(Request $request)
     {
         $validator = Validator::make($request->all(), [
@@ -217,6 +297,38 @@ class AdminProductController extends Controller
     /**
      * Update a product.
      */
+    #[OA\Put(
+        path: '/api/admin/products/{id}',
+        summary: 'Update product details and sync active batches',
+        tags: ['Admin Products'],
+        security: [['bearerAuth' => []]],
+        parameters: [
+            new OA\Parameter(name: 'id', in: 'path', required: true, schema: new OA\Schema(type: 'integer', example: 1))
+        ],
+        requestBody: new OA\RequestBody(
+            required: false,
+            content: new OA\MediaType(
+                mediaType: 'multipart/form-data',
+                schema: new OA\Schema(
+                    properties: [
+                        new OA\Property(property: 'name', type: 'string', example: 'Amoxicillin 500mg'),
+                        new OA\Property(property: 'category_id', type: 'integer', example: 1),
+                        new OA\Property(property: 'unit_id', type: 'integer', example: 1),
+                        new OA\Property(property: 'price', type: 'number', example: 14.00),
+                        new OA\Property(property: 'is_published', type: 'boolean', example: true),
+                        new OA\Property(property: 'requires_prescription', type: 'boolean', example: true),
+                        new OA\Property(property: 'deleted_image_ids[]', type: 'array', items: new OA\Items(type: 'integer', example: 5)),
+                        new OA\Property(property: 'images[]', type: 'array', items: new OA\Items(type: 'string', format: 'binary')),
+                    ]
+                )
+            )
+        ),
+        responses: [
+            new OA\Response(response: 200, description: 'Product updated successfully'),
+            new OA\Response(response: 422, description: 'Validation error'),
+            new OA\Response(response: 404, description: 'Product not found')
+        ]
+    )]
     public function update(Request $request, $id)
     {
         $product = Product::findOrFail($id);
@@ -300,29 +412,59 @@ class AdminProductController extends Controller
         ]);
     }
 
-    /**
-     * Show a single product.
-     */
+    #[OA\Get(
+        path: '/api/admin/products/{id}',
+        summary: 'Get single product details with inventory history and active promotions',
+        tags: ['Admin Products'],
+        security: [['bearerAuth' => []]],
+        parameters: [
+            new OA\Parameter(name: 'id', in: 'path', required: true, schema: new OA\Schema(type: 'integer', example: 1))
+        ],
+        responses: [
+            new OA\Response(response: 200, description: 'Product details'),
+            new OA\Response(response: 404, description: 'Product not found')
+        ]
+    )]
     public function show($id)
     {
         $product = Product::with(['category', 'unit', 'pictures', 'movements', 'promotions'])->findOrFail($id);
         return response()->json($product);
     }
 
-    /**
-     * Delete a product (soft delete).
-     */
+    #[OA\Delete(
+        path: '/api/admin/products/{id}',
+        summary: 'Soft-delete a product',
+        tags: ['Admin Products'],
+        security: [['bearerAuth' => []]],
+        parameters: [
+            new OA\Parameter(name: 'id', in: 'path', required: true, schema: new OA\Schema(type: 'integer', example: 1))
+        ],
+        responses: [
+            new OA\Response(response: 200, description: 'Product deleted successfully'),
+            new OA\Response(response: 404, description: 'Product not found')
+        ]
+    )]
     public function destroy($id)
     {
         $product = Product::findOrFail($id);
         $product->delete();
 
         ActivityLog::log('deleted', 'Product', $id, "Product '{$product->name}' deleted");
-
+        return response()->json(['message' => 'Product deleted successfully']);
     }
-    /**
-     * Search products for dropdowns 
-     */
+
+    #[OA\Get(
+        path: '/api/admin/products-search',
+        summary: 'Search products for dropdown select options',
+        tags: ['Admin Products'],
+        security: [['bearerAuth' => []]],
+        parameters: [
+            new OA\Parameter(name: 'q', in: 'query', required: false, schema: new OA\Schema(type: 'string', example: 'para'))
+        ],
+        responses: [
+            new OA\Response(response: 200, description: 'List of matching products (max 10)')
+        ]
+    )]
     public function search(Request $request)
     {
         $query = Product::select('id', 'name', 'price', 'category_id', 'unit_id')
@@ -335,9 +477,19 @@ class AdminProductController extends Controller
         return response()->json($query->limit(10)->get());
     }
 
-    /**
-     * Toggle product publication status.
-     */
+    #[OA\Patch(
+        path: '/api/admin/products/{id}/toggle-publish',
+        summary: 'Toggle public store visibility for a product',
+        tags: ['Admin Products'],
+        security: [['bearerAuth' => []]],
+        parameters: [
+            new OA\Parameter(name: 'id', in: 'path', required: true, schema: new OA\Schema(type: 'integer', example: 1))
+        ],
+        responses: [
+            new OA\Response(response: 200, description: 'Publication status updated'),
+            new OA\Response(response: 404, description: 'Product not found')
+        ]
+    )]
     public function togglePublish($id)
     {
         $product = Product::findOrFail($id);

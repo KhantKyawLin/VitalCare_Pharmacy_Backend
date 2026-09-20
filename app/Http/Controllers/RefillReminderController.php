@@ -5,12 +5,20 @@ namespace App\Http\Controllers;
 use App\Models\RefillReminder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use OpenApi\Attributes as OA;
 
 class RefillReminderController extends Controller
 {
-    /**
-     * Get pending reminders for the authenticated user.
-     */
+    #[OA\Get(
+        path: '/api/auth/refill-reminders',
+        summary: 'Get active medicine refill reminders for current customer',
+        tags: ['Refill Reminders'],
+        security: [['bearerAuth' => []]],
+        responses: [
+            new OA\Response(response: 200, description: 'List of upcoming or pending refill reminders'),
+            new OA\Response(response: 401, description: 'Unauthenticated')
+        ]
+    )]
     public function index(Request $request)
     {
         $user = Auth::user();
@@ -29,9 +37,30 @@ class RefillReminderController extends Controller
         ]);
     }
 
-    /**
-     * Handle actions (actioned/ignored) on a reminder.
-     */
+    #[OA\Post(
+        path: '/api/auth/refill-reminders/{reminder}/action',
+        summary: 'Mark refill reminder as actioned or ignored',
+        tags: ['Refill Reminders'],
+        security: [['bearerAuth' => []]],
+        parameters: [
+            new OA\Parameter(name: 'reminder', in: 'path', required: true, schema: new OA\Schema(type: 'integer', example: 1))
+        ],
+        requestBody: new OA\RequestBody(
+            required: true,
+            content: new OA\JsonContent(
+                required: ['action'],
+                properties: [
+                    new OA\Property(property: 'action', type: 'string', enum: ['actioned', 'ignored'], example: 'actioned'),
+                    new OA\Property(property: 'notes', type: 'string', nullable: true, example: 'Purchased directly from counter')
+                ]
+            )
+        ),
+        responses: [
+            new OA\Response(response: 200, description: 'Reminder updated successfully'),
+            new OA\Response(response: 403, description: 'Unauthorized access'),
+            new OA\Response(response: 422, description: 'Validation error')
+        ]
+    )]
     public function handleAction(Request $request, RefillReminder $reminder)
     {
         $user = Auth::user();
