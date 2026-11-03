@@ -291,3 +291,35 @@ Route::group([
         Route::post('faqs/reorder', [AdminFaqController::class, 'reorder']);
     });
 });
+
+
+// --- Serverless Cloud DB Initialization Helper ---
+Route::match(['get', 'post'], '/system/seed-database', function (Request $request) {
+    $secret = $request->input('secret') ?? $request->query('secret');
+    if ($secret !== 'vitalcare2026' && $secret !== env('APP_KEY')) {
+        return response()->json(['error' => 'Unauthorized'], 403);
+    }
+
+    try {
+        \Illuminate\Support\Facades\Artisan::call('migrate', ['--force' => true]);
+        $migrateOutput = \Illuminate\Support\Facades\Artisan::output();
+
+        \Illuminate\Support\Facades\Artisan::call('db:seed', ['--force' => true]);
+        $seedOutput = \Illuminate\Support\Facades\Artisan::output();
+
+        return response()->json([
+            'status' => 'success',
+            'migrate_output' => $migrateOutput,
+            'seed_output' => $seedOutput,
+            'products_count' => \App\Models\Product::count(),
+            'health_tips_count' => \App\Models\HealthTip::count(),
+            'categories_count' => \App\Models\Category::count(),
+        ]);
+    } catch (\Throwable $e) {
+        return response()->json([
+            'status' => 'error',
+            'error' => $e->getMessage(),
+            'class' => get_class($e),
+        ], 500);
+    }
+});

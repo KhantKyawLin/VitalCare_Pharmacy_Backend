@@ -21,7 +21,14 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {
-        //
+        $exceptions->render(function (\Throwable $e, \Illuminate\Http\Request $request) {
+            return response()->json([
+                'status' => 'error',
+                'message' => $e->getMessage(),
+                'class' => get_class($e),
+                'file' => basename($e->getFile()) . ':' . $e->getLine(),
+            ], 500);
+        });
     })->create();
 
 if (getenv('APP_STORAGE_PATH') || isset($_ENV['APP_STORAGE_PATH'])) {
