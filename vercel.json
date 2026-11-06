@@ -24,6 +24,8 @@
         "CACHE_STORE": "array",
         "SESSION_DRIVER": "cookie",
         "LOG_CHANNEL": "errorlog",
-        "BROADCAST_CONNECTION": "null"
+        "BROADCAST_CONNECTION": "null",
+        "JWT_SECRET": "nxKHYKyqpdEQkIxz2fSB9C9l9AGDeNky4CUC6DYwI1DF1wTT5DGUBbqQh1XOJrxp",
+        "JWT_ALGO": "HS256"
     }
 }
